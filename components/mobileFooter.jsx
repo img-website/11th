@@ -1,6 +1,6 @@
 "use client"
-import { Tab, Tabs } from '@nextui-org/tabs'
 import { siteConfig } from '@/config/site'
+import { Tab, Tabs } from '@nextui-org/react';
 import { usePathname } from 'next/navigation'
 
 const MobileFooter = () => {

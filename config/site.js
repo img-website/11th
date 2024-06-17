@@ -1,68 +1,32 @@
+import { HeartFilledIcon, HomeIcon, MenuIcon, PlusIcon, StarsIcon, VideoLibraryIcon } from "@/components/icons";
 
 export const siteConfig = {
-	name: "Next.js + NextUI",
-	description: "Make beautiful websites regardless of your design experience.",
-	navItems: [
-		{
-			label: "Home",
-			href: "/",
-		},
-		{
-			label: "Admin",
-			href: "/admin",
-		},
-		{
-			label: "Dashboard",
-			href: "/admin/dashboard",
-		},
-		{
-			label: "Status",
-			href: "/admin/status",
-		},
-		{
-			label: "Catelog",
-			href: "/admin/categories",
-		}
-	],
-	navMenuItems: [
-		{
-			label: "Profile",
-			href: "/profile",
-		},
-		{
-			label: "Dashboard",
-			href: "/dashboard",
-		},
-		{
-			label: "Projects",
-			href: "/projects",
-		},
-		{
-			label: "Team",
-			href: "/team",
-		},
-		{
-			label: "Calendar",
-			href: "/calendar",
-		},
-		{
-			label: "Settings",
-			href: "/settings",
-		},
-		{
-			label: "Help & Feedback",
-			href: "/help-feedback",
-		},
-		{
-			label: "Logout",
-			href: "/logout",
-		},
-	],
-	links: {
-		github: "https://github.com/nextui-org/nextui",
-		twitter: "https://twitter.com/getnextui",
-		docs: "https://nextui.org",
-		discord: "https://discord.gg/9b6yyZKmH4",
-		sponsor: "https://patreon.com/jrgarciadev"
-	},
+        name: process.env.NEXT_PROJECT_NAME,
+        short_name: process.env.NEXT_PROJECT_SHORT_NAME,
+        title: process.env.NEXT_PROJECT_NAME,
+        description: process.env.NEXT_PROJECT_DESCRIPTION,
+        navItems: [
+                { href: '/', label: 'Home', icon: HomeIcon, isAuthenticaed: false },
+                { href: '/property-detail', label: 'Property Detail', icon: StarsIcon, isAuthenticaed: false },
+                { href: '/property', label: 'Property', icon: VideoLibraryIcon, isAuthenticaed: false },
+                { href: '/wishlist', label: 'Wishlist', icon: HeartFilledIcon, isAuthenticaed: true },
+                { href: '/follow-us', label: 'Follow US', icon: PlusIcon, isAuthenticaed: false }
+        ],
+        mobileNavItems: [
+                { href: '/wishlist', label: 'Wishlist', icon: HeartFilledIcon, isAuthenticaed: true },
+                { href: '/follow-us', label: 'Follow US', icon: PlusIcon, isAuthenticaed: false }
+        ],
+        mobileBottomNavItems: [
+                { id:'home', href: '/', label: 'Home', icon: HomeIcon, isAuthenticaed: false },
+                { id:'new-shorts', href: '/new-shorts', label: 'New Shorts', icon: StarsIcon, isAuthenticaed: false },
+                { id:'all-videos', href: '/all-videos', label: 'All Videos', icon: VideoLibraryIcon, isAuthenticaed: false },
+                { id:'menu', href: '/menu', label: 'Menu', icon: MenuIcon, isAuthenticaed: false }
+        ],
+        links: {
+                facebook: process.env.NEXT_FACEBOOK,
+                instagram: process.env.NEXT_INSTAGRAM,
+                youtube: process.env.NEXT_YOUTUBE,
+                telegram: process.env.NEXT_TELEGRAM,
+                messenger: process.env.NEXT_MESSENGER
+        },
 };

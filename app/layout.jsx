@@ -2,7 +2,7 @@ import "@/styles/globals.css";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import clsx from "clsx";
-import { UiProviders } from "@/app/uiProviders";
+import { Providers } from "@/app/Providers";
 
 export const metadata = {
 	title: {
@@ -34,9 +34,9 @@ export default function RootLayout({
 					fontSans.variable
 				)}
 			>
-				<UiProviders>
+				<Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
 					{children}
-				</UiProviders>
+				</Providers>
 			</body>
 		</html>
 	);

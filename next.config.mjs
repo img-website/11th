@@ -22,7 +22,7 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
-                hostname: 'app.requestly.io',
+                hostname: 'lh3.googleusercontent.com',
                 port: '',
                 pathname: '/**',
             },

@@ -1,11 +1,11 @@
 "use client"
 import { Button, Card, CardBody, CardFooter, CardHeader, Divider, Input } from '@nextui-org/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { EyeFilledIcon, EyeSlashFilledIcon, Google2Icon, GoogleIcon, LoginCircleIcon } from '@/components/icons'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { useFirebase } from '@/app/context/Firebase'
+// import { ThemeSwitch } from '@/components/theme-switch'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useAuthentications } from '@/app/context/Authentications'
 
 
 
@@ -15,14 +15,14 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [submitLoading, setSubmitLoading] = useState(false);
 
-    const firebase = useFirebase();
+    const authentications = useAuthentications();
 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitLoading(true);
         try {
-            const userCredential = await firebase.signinUserWithEmailAndPass(email, password);
+            const userCredential = await authentications.signinUserWithEmailAndPass(email, password);
             setEmail("");
             setPassword("");
         } catch (error) {
@@ -36,8 +36,8 @@ const LoginPage = () => {
         <div className='relative overflow-hidden'>
             <Image className='absolute inset-0 object-cover size-full' src='https://images.unsplash.com/photo-1604014238170-4def1e4e6fcf?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' width={400} height={400} alt='login background' />
             <div className="flex max-sm:flex-col w-full items-stretch h-dvh relative z-10">
-                <div className="sm:w-1/2 w-full"></div>
-                <div className="sm:w-1/2 w-full overflow-auto max-sm:h-dvh backdrop-blur-md bg-white/50 dark:bg-black/50 flex flex-col px-5">
+                {/* <div className="sm:w-1/2 w-full"></div> */}
+                <div className="w-full overflow-auto max-sm:h-dvh backdrop-blur-md bg-white/50 dark:bg-black/50 flex flex-col px-5">
                     <div className="grow py-4"></div>
                     <Card as={"form"} onSubmit={handleSubmit} className={`max-w-[400px] w-full overflow-visible mx-auto ${submitLoading ? 'pointer-events-none' : ''}`}>
                         <CardHeader className="flex gap-3">
@@ -52,7 +52,7 @@ const LoginPage = () => {
                                 <p className="text-md font-bold">Login Now</p>
                                 <p className="text-small text-default-500">All fields are mandatory.</p>
                             </div>
-                            <ThemeSwitch />
+                            {/* <ThemeSwitch /> */}
                         </CardHeader>
                         <Divider />
                         <CardBody>
@@ -119,7 +119,7 @@ const LoginPage = () => {
                                         <Google2Icon className="size-6 dark:hidden" />
                                     </>
                                 }
-                                onClick={firebase?.signinWithGoogle}
+                                onClick={authentications?.signinWithGoogle}
                             >
                                 Sign in with Google
                             </Button>
