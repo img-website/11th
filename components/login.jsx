@@ -10,7 +10,7 @@ const Login = () => {
 
     return (
         authentications?.isLoggedIn ?
-            <ProfileIcon credential={authentications?.user} LogoutHandler={authentications?.signOutHandle} />
+            <ProfileIcon authentications={authentications} />
             :
             <Button
                 as={Link}

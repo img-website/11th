@@ -4,11 +4,11 @@ import Image from 'next/image'
 import { Button, Card, Divider } from '@nextui-org/react'
 import Link from 'next/link'
 
-const FeaturedPropertyCard = () => {
+const FeaturedPropertyCard = ({item}) => {
     return (
         <Card className="group rounded-xl bg-white flex flex-col dark:bg-slate-900 shadow hover:shadow-xl dark:hover:shadow-xl dark:shadow-gray-700 dark:hover:shadow-gray-700 overflow-hidden ease-in-out duration-500">
             <div className="relative">
-                <Image width={400} height={300} className='w-full object-cover' src="/property/1.jpg" alt="" />
+                <Image width={400} height={300} className='w-full object-cover' src={item?.banner} alt="" />
 
                 <div className="absolute top-4 end-4">
                     <Button as={Link} className='rounded-full min-w-0 h-auto p-1' href="" variant="ghost" color='danger'><HeartFilledIcon /></Button>
@@ -17,23 +17,23 @@ const FeaturedPropertyCard = () => {
 
             <div className="p-6 grow flex flex-col">
                 <div className="pb-4 grow">
-                    <Link href="/property-detail" className="text-lg hover:text-green-600 line-clamp-2 font-medium ease-in-out duration-500">10765 Hillshire Ave, Baton Rouge, LA 70810, USA</Link>
+                    <Link href="/property-detail" className="text-lg hover:text-green-600 line-clamp-2 font-medium ease-in-out duration-500">{item?.title}</Link>
                 </div>
                 <Divider className='opacity-35' />
                 <ul className="py-4 flex items-center list-none">
                     <li className="flex items-center me-4">
                         <SqfIcon className="size-4 me-2 text-green-600" />
-                        <span>8000sqf</span>
+                        <span>{item?.property_details?.apartment_area}sqf</span>
                     </li>
 
                     <li className="flex items-center me-4">
                         <BedIcon className="size-4 me-2 text-green-600" />
-                        <span>4 Beds</span>
+                        <span>{item?.property_details?.bedrooms} Bedrooms</span>
                     </li>
 
                     <li className="flex items-center">
                         <BathIcon className="size-4 me-2 text-green-600" />
-                        <span>4 Baths</span>
+                        <span>{item?.property_details?.bathrooms} Bath</span>
                     </li>
                 </ul>
                 <Divider className='opacity-35' />
@@ -41,7 +41,7 @@ const FeaturedPropertyCard = () => {
                 <ul className="pt-4 flex justify-between items-center list-none">
                     <li>
                         <span className="text-slate-400">Price</span>
-                        <p className="text-lg font-medium">$5000</p>
+                        <p className="text-lg font-medium">₹{item?.sale_price}</p>
                     </li>
 
                     {/* <li>

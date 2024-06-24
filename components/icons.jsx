@@ -977,6 +977,7 @@ export const HandShakeIcon = (props) => {
 	);
 };
 
+
 export const BedIcon = (props) => {
 	const { width, height = 40 } = props;
 

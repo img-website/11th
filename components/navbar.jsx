@@ -57,11 +57,22 @@ export const Navbar = () => {
 					className="hidden sm:flex basis-1/5 sm:basis-6/12 md:basis-4/12"
 					justify="center"
 				>
-					<NavbarItem className="flex w-full">
+					{/* <NavbarItem className="flex w-full">
 						<Suspense fallback={"SearchInput Loading..."}>
 							<SearchInput />
 						</Suspense>
-					</NavbarItem>
+					</NavbarItem> */}
+					{siteConfig.navItems.map((item) => (
+						<NavbarItem key={item.href}>
+							<NextLink
+								className="data-[active=true]:text-primary data-[active=true]:font-medium text-sm px-5"
+								color="foreground"
+								href={item.href}
+							>
+								{item.label}
+							</NextLink>
+						</NavbarItem>
+					))}
 				</NavbarContent>
 
 				<NavbarContent
@@ -132,7 +143,7 @@ export const Navbar = () => {
 				</div>
 			</NavbarMenu> */}
 			</NextUINavbar>
-			<NextUINavbar maxWidth="xl" classNames={{
+			{/* <NextUINavbar maxWidth="xl" classNames={{
 				wrapper: "wrapper-classes h-auto pb-4",
 			}}>
 				<NavbarContent
@@ -151,7 +162,7 @@ export const Navbar = () => {
 						</NavbarItem>
 					))}
 				</NavbarContent>
-			</NextUINavbar>
+			</NextUINavbar> */}
 		</>
 	);
 };

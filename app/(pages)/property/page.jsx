@@ -1,21 +1,95 @@
+"use client"
 import BuyerBenefits from '@/components/buyerBenefits'
 import FeaturedPropertyCard from '@/components/featuredPropertyCard'
 import HaveQuestion from '@/components/haveQuestion'
 import { SearchIcon } from '@/components/icons'
-import { Button, Card, CardBody, Input, Tab, Tabs } from '@nextui-org/react'
-import Image from 'next/image'
+import Steps from '@/components/steps'
+import { Button, Input, Card, Select, SelectItem } from '@nextui-org/react'
 import Link from 'next/link'
 import React, { Suspense } from 'react'
+import { useState, useEffect } from 'react';
+import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { useFirebase } from '@/app/context/Firebase';
 
 const PropertyPage = () => {
+    const { firebaseDB } = useFirebase();
+    const [data, setData] = useState([]);
+    const [filteredData, setFilteredData] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('default'); // Initial sort option
+
+    // Fetch data from Firestore on component mount and sort by default
+    useEffect(() => {
+        const fetchData = async () => {
+            const colRef = collection(firebaseDB, 'properties');
+            const querySnapshot = await getDocs(colRef);
+            setData(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        };
+
+        fetchData();
+    }, [firebaseDB]);
+
+    // Filter data based on search term
+    useEffect(() => {
+        const filtered = data.filter(item =>
+            item.title?.toLowerCase().includes(searchTerm?.toLowerCase())
+        );
+        setFilteredData(filtered);
+    }, [data, searchTerm]);
+
+    // Handle search term change
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+    };
+
+    const handleSortChange = async (event) => {
+        setSortBy(event.target.value);
+
+        const sortedData = filteredData.slice(); // Create copy
+        if (event.target.value == 'default') {
+            const colRef = collection(firebaseDB, 'properties');
+            const querySnapshot = await getDocs(colRef);
+
+            // Process and set data after sorting
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(data);
+            // Default sorting logic (if needed)
+        } else if (event.target.value == 'lowPrice') {
+            const colRef = collection(firebaseDB, 'properties');
+            const q = query(colRef, orderBy('sale_price', 'asc')); // Adjust field and direction
+            const querySnapshot = await getDocs(q);
+
+            // Process and set data after sorting
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(data);
+        } else if (event.target.value == 'highPrice') {
+            const colRef = collection(firebaseDB, 'properties');
+            const q = query(colRef, orderBy('sale_price', 'desc')); // Adjust field and direction
+            const querySnapshot = await getDocs(q);
+
+            // Process and set data after sorting
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(data);
+        } else if (event.target.value == 'createdAt') {
+            const colRef = collection(firebaseDB, 'properties');
+            const q = query(colRef, orderBy('createdAt', 'desc')); // Adjust field and direction
+            const querySnapshot = await getDocs(q);
+
+            // Process and set data after sorting
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setData(data);
+        }
+
+        setFilteredData(sortedData);
+    };
     return (
         <>
             <section className="relative table w-full py-24 bg-[url('/bg/01.jpg')] bg-no-repeat bg-center bg-cover">
                 <div className="absolute inset-0 bg-black opacity-70"></div>
                 <div className="max-w-7xl mx-auto w-full px-4 relative">
-                    <div className="grid grid-cols-1 text-center mt-10">
-                        <h3 className="md:text-4xl text-3xl md:leading-normal leading-normal font-medium text-white pb-5">Find Your Dream Home</h3>
-                        <p className="text-slate-200 max-w-xl mx-auto">A great plateform to buy, sell and rent your properties without any agent or commisions.</p>
+                    <div className="grid grid-cols-1 text-center">
+                        <h3 className="md:text-4xl text-3xl md:leading-normal leading-normal font-medium text-white pb-4">Find Your Dream Home</h3>
+                        <p className="text-slate-200 max-w-2xl mx-auto">A great plateform to buy, sell and rent your properties without any agent or commisions.</p>
                     </div>
                 </div>
             </section>
@@ -27,21 +101,51 @@ const PropertyPage = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto w-full px-4 relative -mt-[25px]">
+            <div className="max-w-7xl mx-auto w-full px-4 relative -mt-[36px]">
                 <div className="grid grid-cols-1">
                     <div className="subcribe-form z-1">
-                        <form className="relative max-w-2xl mx-auto">
-                            <i data-feather="search" className="size-5 absolute top-[47%] -translate-y-1/2 start-4"></i>
+                        <form className="relative max-w-2xl mx-auto flex border-2 border-default-300 dark:border-default-400 rounded-2xl overflow-hidden dark:has-[input:focus]:border-default-600 has-[input:focus]:border-default-400">
+                            <Select
+                                variant='bordered'
+                                value={sortBy}
+                                label="Sort by"
+                                isRequired
+                                defaultSelectedKeys={["default"]}
+                                classNames={{
+                                    value: "value-classes font-bold",
+                                    base: "base-classes w-52",
+                                    label: "label-classes",
+                                    description: "description-classes",
+                                    errorMessage: "errorMessage-classes",
+                                    mainWrapper: "mainWrapper-classes",
+                                    innerWrapper: "innerWrapper-classes",
+                                    helperWrapper: "helperWrapper-classes",
+                                    listbox: "listbox-classes",
+                                    trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-r-none bg-default-50 !border-y-0 !border-l-0",
+                                    selectorIcon: "selectorIcon-classes",
+                                    spinner: "spinner-classes",
+                                    listboxWrapper: "listboxWrapper-classes",
+                                    popoverContent: "popoverContent-classes",
+                                }}
+                                onChange={handleSortChange}
+                                placeholder="Sort by..."
+                            >
+                                <SelectItem value="default" key={"default"}>Default</SelectItem>
+                                <SelectItem value="lowPrice" key={"lowPrice"}>By Low Price</SelectItem>
+                                <SelectItem value="highPrice" key={"highPrice"}>By High Price</SelectItem>
+                                <SelectItem value="createdAt" key={"createdAt"}>By Date</SelectItem>
+                            </Select>
                             <Input
                                 variant='bordered'
                                 type="search"
                                 id="search"
                                 name="search"
+                                label="Search"
                                 classNames={{
                                     base: "base-classes",
                                     label: "label-classes",
                                     mainWrapper: "main-wrapper-classes",
-                                    inputWrapper: "input-wrapper-classes bg-default-50 h-16",
+                                    inputWrapper: "input-wrapper-classes rounded-l-none bg-default-50 !border-0",
                                     innerWrapper: "inner-wrapper-classes",
                                     input: "input-classes font-bold",
                                     clearButton: "clear-button-classes",
@@ -51,24 +155,26 @@ const PropertyPage = () => {
                                 }}
                                 startContent={<SearchIcon className="size-5" />}
                                 endContent={
-                                    <Button type='submit' variant='solid' color='default' className='font-semibold'>Search</Button>
+                                    <Button type='button' variant='solid' color='default' className='font-semibold'>Search</Button>
                                 }
-                                placeholder="City, Address, Zip :"
+                                placeholder="Type to search..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
                             />
                         </form>
                     </div>
                 </div>
             </div>
-            <section className="relative lg:py-24 py-16">
+            <section className="relative py-16">
                 <div className="max-w-7xl mx-auto w-full px-4 relative">
 
                     <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 mt-8 gap-[30px]">
-                        <FeaturedPropertyCard />
-                        <FeaturedPropertyCard />
-                        <FeaturedPropertyCard />
-                        <FeaturedPropertyCard />
-                        <FeaturedPropertyCard />
-                        <FeaturedPropertyCard />
+                        {filteredData.map(item => (
+                            <FeaturedPropertyCard key={item.id} item={item} />
+                        ))}
+                        {/* <Card key={item.id}>
+                                {`${item.title} ${new Timestamp(item.createdAt.seconds, item.createdAt.nanoseconds).toDate().toISOString()}`}
+                            </Card> */}
                     </div>
 
                     <div className="md:flex justify-center text-center mt-6">
@@ -82,108 +188,13 @@ const PropertyPage = () => {
                     <BuyerBenefits />
                 </Suspense>
 
-                <div className="max-w-7xl mx-auto w-full px-4 relative py-16">
+                <Suspense fallback={"Loading..."} >
+                    <Steps />
+                </Suspense>
 
-                    <div className="flex w-full flex-col">
-                        <Tabs aria-label="Options">
-                            <Tab key="photos" title="Photos">
-                                <Card>
-                                    <CardBody>
-                                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-                            <Tab key="music" title="Music">
-                                <Card>
-                                    <CardBody>
-                                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-                            <Tab key="videos" title="Videos">
-                                <Card>
-                                    <CardBody>
-                                        Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-                        </Tabs>
-                    </div>
-                    <div className="grid md:grid-cols-12 grid-cols-1 gap-[30px]">
-                        <div className="lg:col-span-4 md:col-span-5">
-                            <div className="sticky top-12">
-                                <ul className="flex-column text-center p-6 bg-white dark:bg-slate-900 shadow dark:shadow-gray-700 rounded-md">
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white hover:text-green-600 transition-all duration-500 ease-in-out">Pre Approval Letter</button>
-                                    </li>
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white mt-3 transition-all duration-500 ease-in-out">Schedule a Showing</button>
-                                    </li>
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white mt-3 transition-all duration-500 ease-in-out">Submit an Offer</button>
-                                    </li>
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white mt-3 transition-all duration-500 ease-in-out">Property Inspection</button>
-                                    </li>
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white mt-3 transition-all duration-500 ease-in-out">Appraisal</button>
-                                    </li>
-                                    <li>
-                                        <button className="px-4 py-2 text-base font-medium rounded-md w-full text-white mt-3 transition-all duration-500 ease-in-out">Closing Deal</button>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="lg:col-span-8 md:col-span-7">
-                            <div>
-                                <div className="">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/Agent_Monochromatic.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Pre Approval Letter</h5>
-                                        <p className="text-slate-400 mt-3">Most buyers think the first step is finding their dream house, but the truth is finding the funding is the first step. 11thUI streamlines the Loan Pre-Approval process with our ecosystem of Premier Partners or simply upload your own Pre-Approval letter.</p>
-                                    </div>
-                                </div>
-                                <div className="hidden">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/presentation_Flatline.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Schedule a Showing</h5>
-                                        <p className="text-slate-400 mt-3">11thUI allows a buyer to schedule an instant showing and gain a private viewing without the need for multiple parties to be involved. You pick the time that works for you!</p>
-                                    </div>
-                                </div>
-                                <div className="hidden">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/session_Flatline.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Submit an Offer</h5>
-                                        <p className="text-slate-400 mt-3">11thUI walks a buyer through the purchase agreement process making the paperwork appear effortless. With our custom workflows and progress analytics, you will always know where your purchase stands. No more phone tag and unreturned emails!</p>
-                                    </div>
-                                </div>
-                                <div className="hidden">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/Startup_Flatline.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Property Inspection</h5>
-                                        <p className="text-slate-400 mt-3">No one wants to buy a lemon. Book an inspection with a licensed inspector, then submit the repair requests all via the 11thUI platform.</p>
-                                    </div>
-                                </div>
-                                <div className="hidden">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/team_Flatline.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Appraisal</h5>
-                                        <p className="text-slate-400 mt-3">11thUI monitors the appraisal process ensuring the home you are purchasing meets or exceeds the price you are paying.</p>
-                                    </div>
-                                </div>
-                                <div className="hidden">
-                                    <Image width="800" height="800" className='max-w-64' src="/svg/Team_meeting_Two.svg" alt="" />
-                                    <div className="mt-6">
-                                        <h5 className="font-medium text-xl">Closing Deal</h5>
-                                        <p className="text-slate-400 mt-3">Finally the closing packet is sent to the Title office, and the day has come… You have 11thUI the home of your dreams!</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <HaveQuestion />
+                <Suspense fallback={"Loading..."} >
+                    <HaveQuestion />
+                </Suspense>
             </section>
         </>
     )

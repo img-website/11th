@@ -9,8 +9,8 @@ export const siteConfig = {
                 { href: '/', label: 'Home', icon: HomeIcon, isAuthenticaed: false },
                 { href: '/property-detail', label: 'Property Detail', icon: StarsIcon, isAuthenticaed: false },
                 { href: '/property', label: 'Property', icon: VideoLibraryIcon, isAuthenticaed: false },
-                { href: '/wishlist', label: 'Wishlist', icon: HeartFilledIcon, isAuthenticaed: true },
-                { href: '/follow-us', label: 'Follow US', icon: PlusIcon, isAuthenticaed: false }
+                { href: '/about-us', label: 'About US', icon: HeartFilledIcon, isAuthenticaed: true },
+                { href: '/contact-us', label: 'Contact US', icon: PlusIcon, isAuthenticaed: false }
         ],
         mobileNavItems: [
                 { href: '/wishlist', label: 'Wishlist', icon: HeartFilledIcon, isAuthenticaed: true },
