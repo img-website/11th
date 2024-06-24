@@ -27,5 +27,11 @@ export const middleware = (request) => {
 };
 
 export const config = {
-    matcher: ["/login", "/register", "/property-detail", "/property"],
+    matcher: [
+        "/login/:path*",
+        "/register/:path*",
+        "/property-detail/:path*",
+        "/property/:path*",
+        "/admin/:path*"
+    ],
 };

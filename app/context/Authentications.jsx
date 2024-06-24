@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [DBUser, setDBUser] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(null);
 
     useEffect(() => {
         onAuthStateChanged(firebaseAuth, async (user) => {
@@ -32,6 +33,7 @@ export const AuthProvider = ({ children }) => {
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
                     setDBUser(userData);
+                    document.cookie = `isAdmin=${userData.isAdmin}; path=/admin/dashboard;`;
                 } else {
                     setDBUser(null);
                 }
@@ -43,6 +45,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(null);
                 setIsLoggedIn(false);
                 document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "isAdmin=null; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/admin/dashboard;";
             }
         });
     }, [])
@@ -341,6 +344,16 @@ export const AuthProvider = ({ children }) => {
         isLoggedInOrNot();
     }, [])
 
+    
+    const isLoggedInAsAdmin = () => {
+        const checkIsAdmin = document.cookie.split(';').find(c => c.startsWith('isAdmin='));
+        setIsAdmin(checkIsAdmin == "isAdmin=true");
+    }
+
+    useEffect(() => {
+        isLoggedInAsAdmin();
+    }, [])
+
     const signOutHandle = async () => {
 
         setMainLoading(true)
@@ -386,7 +399,7 @@ export const AuthProvider = ({ children }) => {
 
 
     return (
-        <AuthContext.Provider value={{ signupUserWithEmailAndPassword, signinUserWithEmailAndPass, signinWithGoogle, signOutHandle, isLoggedIn, user, DBUser, mainLoading, setMainLoading }}>
+        <AuthContext.Provider value={{ signupUserWithEmailAndPassword, signinUserWithEmailAndPass, signinWithGoogle, signOutHandle, isLoggedIn, user, DBUser, isAdmin, mainLoading, setMainLoading }}>
             {children}
         </AuthContext.Provider>
     );

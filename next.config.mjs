@@ -33,7 +33,8 @@ const nextConfig = {
                 pathname: '/**',
             },
         ],
-    }
+    },
+    pageExtensions: ['js', 'jsx']
 };
 
 export default nextConfig;
