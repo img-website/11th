@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [DBUser, setDBUser] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(null);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         onAuthStateChanged(firebaseAuth, async (user) => {
@@ -33,7 +33,11 @@ export const AuthProvider = ({ children }) => {
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
                     setDBUser(userData);
-                    document.cookie = `isAdmin=${userData.isAdmin}; path=/admin/dashboard;`;
+                    if(userData.isAdmin){
+                        document.cookie = `isAdmin=true; path=/;`;
+                    } else {
+                        document.cookie = "isAdmin=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    }
                 } else {
                     setDBUser(null);
                 }
@@ -45,7 +49,6 @@ export const AuthProvider = ({ children }) => {
                 setUser(null);
                 setIsLoggedIn(false);
                 document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                document.cookie = "isAdmin=null; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/admin/dashboard;";
             }
         });
     }, [])
@@ -347,7 +350,7 @@ export const AuthProvider = ({ children }) => {
     
     const isLoggedInAsAdmin = () => {
         const checkIsAdmin = document.cookie.split(';').find(c => c.startsWith('isAdmin='));
-        setIsAdmin(checkIsAdmin == "isAdmin=true");
+        setIsAdmin(checkIsAdmin ? true : false);
     }
 
     useEffect(() => {
