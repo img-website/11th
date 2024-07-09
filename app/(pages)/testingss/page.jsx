@@ -13,7 +13,10 @@ const SearchAndFilterss = () => {
         e.preventDefault();
         try {
             const docRef = await addDoc(collection(firebaseDB, "properties"), {
-                title: "Our team will contact you shortly",
+                title: "Test Our team will contact you shortly",
+                titleSearch: "Test Our team will contact you shortly".trim().toLowerCase(),
+                titleSearchArr: "Test Our team will contact you shortly".toLowerCase().split(' '),
+                price: Number(1200500),
                 sale_price: Number(1200500),
                 banner: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop",
                 condition: "new",

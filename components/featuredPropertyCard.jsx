@@ -8,7 +8,7 @@ const FeaturedPropertyCard = ({item}) => {
     return (
         <Card className="group rounded-xl bg-white flex flex-col dark:bg-slate-900 shadow hover:shadow-xl dark:hover:shadow-xl dark:shadow-gray-700 dark:hover:shadow-gray-700 overflow-hidden ease-in-out duration-500">
             <div className="relative">
-                <Image width={400} height={300} className='w-full object-cover' src={item?.banner} alt="" />
+                <Image width={400} height={300} className='w-full object-cover aspect-video' src={item?.banner} alt="" />
 
                 <div className="absolute top-4 end-4">
                     <Button as={Link} className='rounded-full min-w-0 h-auto p-1' href="" variant="ghost" color='danger'><HeartFilledIcon /></Button>

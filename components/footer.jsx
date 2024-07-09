@@ -14,7 +14,7 @@ const FooterSection = () => {
                             <div className="grid md:grid-cols-12 grid-cols-1 gap-[30px]">
                                 <div className="lg:col-span-4 md:col-span-12">
                                     <Link href="" className="text-[22px] focus:outline-none">
-                                        <Image width={100} height={100} src="/logo-light.png" alt="" />
+                                        <Image priority width={100} height={100} src="/logo-light.png" alt="" />
                                     </Link>
                                     <p className="mt-6 text-gray-300">A great plateform to buy, sell and rent your properties without any agent or commisions.</p>
 

@@ -4,84 +4,107 @@ import FeaturedPropertyCard from '@/components/featuredPropertyCard'
 import HaveQuestion from '@/components/haveQuestion'
 import { SearchIcon } from '@/components/icons'
 import Steps from '@/components/steps'
-import { Button, Input, Card, Select, SelectItem } from '@nextui-org/react'
+import { Button, Input, Card, Select, SelectItem, Autocomplete, AutocompleteItem, Avatar } from '@nextui-org/react'
 import Link from 'next/link'
 import React, { Suspense } from 'react'
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { useFirebase } from '@/app/context/Firebase';
+import SkeletonFeaturedPropertyCard from '@/components/skeleton/skeletonFeaturedPropertyCard'
 
 const PropertyPage = () => {
-    const { firebaseDB } = useFirebase();
-    const [data, setData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [sortBy, setSortBy] = useState('default'); // Initial sort option
 
-    // Fetch data from Firestore on component mount and sort by default
+    const { firebaseDB: db } = useFirebase();
+    const [locations, setLocations] = useState([]);
+    const [data, setData] = useState([]);
+    const [properyTypeBy, setPropertyTypeBy] = useState(new Set());
+    const [locationBy, setLocationBy] = useState();
+    const [orderByField, setOrderByField] = useState(new Set());
+    const [orderByDirection, setOrderByDirection] = useState(new Set(['asc']));
+    const [limitValue, setLimitValue] = useState(new Set(['10']));
+    const [loading, setLoading] = useState(false);
+
+
+    const getFilteredData = async (collectionName, filters = {}) => {
+        const collectionRef = collection(db, collectionName);
+        let q = query(collectionRef);
+
+        // Apply 'where' filters
+        if (filters.where && Array.isArray(filters.where)) {
+            filters.where.forEach(condition => {
+                q = query(q, where(...condition));
+            });
+        }
+
+        // Apply 'orderBy' filter
+        if (filters.orderBy) {
+            q = query(q, orderBy(...filters.orderBy));
+        }
+
+        // Apply 'limit' filter
+        if (filters.limit) {
+            q = query(q, limit(filters.limit));
+        }
+
+        // Fetch data
+        try {
+            setLoading(true);
+            const querySnapshot = await getDocs(q);
+            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return data;
+        } catch (error) {
+            console.error('Error fetching data: ', error);
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         const fetchData = async () => {
-            const colRef = collection(firebaseDB, 'properties');
-            const querySnapshot = await getDocs(colRef);
-            setData(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const filters = {};
+            if (properyTypeBy.size && properyTypeBy?.currentKey != "") {
+                filters.where = filters.where || [];
+                filters.where.push(['type', '==', Array.from(properyTypeBy)[0]]);
+            }
+            if (locationBy) {
+                filters.where = filters.where || [];
+                filters.where.push(['address.city', '==', locationBy]);
+                // filters.where.push(['address.city', '==', Array.from(locationBy)[0]]);
+            }
+            if (orderByField.size && orderByField?.anchorKey != "") {
+                filters.orderBy = [Array.from(orderByField)[0], Array.from(orderByDirection)[0]];
+            }
+
+            if (limitValue.size && limitValue?.anchorKey != "") {
+                filters.limit = parseInt(Array.from(limitValue)[0], 10);
+            }
+
+            const result = await getFilteredData('properties', filters);
+            setData(result);
         };
 
         fetchData();
-    }, [firebaseDB]);
+    }, [properyTypeBy, locationBy, orderByField, orderByDirection, limitValue]);
 
-    // Filter data based on search term
+
     useEffect(() => {
-        const filtered = data.filter(item =>
-            item.title?.toLowerCase().includes(searchTerm?.toLowerCase())
-        );
-        setFilteredData(filtered);
-    }, [data, searchTerm]);
-
-    // Handle search term change
-    const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value);
-    };
-
-    const handleSortChange = async (event) => {
-        setSortBy(event.target.value);
-
-        const sortedData = filteredData.slice(); // Create copy
-        if (event.target.value == 'default') {
-            const colRef = collection(firebaseDB, 'properties');
+        const fetchLocationData = async () => {
+            const colRef = collection(db, 'locations');
             const querySnapshot = await getDocs(colRef);
+            setLocations(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        };
 
-            // Process and set data after sorting
-            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setData(data);
-            // Default sorting logic (if needed)
-        } else if (event.target.value == 'lowPrice') {
-            const colRef = collection(firebaseDB, 'properties');
-            const q = query(colRef, orderBy('sale_price', 'asc')); // Adjust field and direction
-            const querySnapshot = await getDocs(q);
+        fetchLocationData();
+    }, [db]);
 
-            // Process and set data after sorting
-            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setData(data);
-        } else if (event.target.value == 'highPrice') {
-            const colRef = collection(firebaseDB, 'properties');
-            const q = query(colRef, orderBy('sale_price', 'desc')); // Adjust field and direction
-            const querySnapshot = await getDocs(q);
-
-            // Process and set data after sorting
-            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setData(data);
-        } else if (event.target.value == 'createdAt') {
-            const colRef = collection(firebaseDB, 'properties');
-            const q = query(colRef, orderBy('createdAt', 'desc')); // Adjust field and direction
-            const querySnapshot = await getDocs(q);
-
-            // Process and set data after sorting
-            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setData(data);
+    const checkVariable = (variable) => {
+        if (typeof variable === 'string' && variable?.length) {
+            return false;
         }
-
-        setFilteredData(sortedData);
+        return variable === '' || variable === null || variable === undefined;
     };
+
     return (
         <>
             <section className="relative table w-full py-24 bg-[url('/bg/01.jpg')] bg-no-repeat bg-center bg-cover">
@@ -105,77 +128,179 @@ const PropertyPage = () => {
                 <div className="grid grid-cols-1">
                     <div className="subcribe-form z-1">
                         <form className="relative max-w-2xl mx-auto flex border-2 border-default-300 dark:border-default-400 rounded-2xl overflow-hidden dark:has-[input:focus]:border-default-600 has-[input:focus]:border-default-400">
-                            <Select
-                                variant='bordered'
-                                value={sortBy}
-                                label="Sort by"
-                                isRequired
-                                defaultSelectedKeys={["default"]}
-                                classNames={{
-                                    value: "value-classes font-bold",
-                                    base: "base-classes w-52",
-                                    label: "label-classes",
-                                    description: "description-classes",
-                                    errorMessage: "errorMessage-classes",
-                                    mainWrapper: "mainWrapper-classes",
-                                    innerWrapper: "innerWrapper-classes",
-                                    helperWrapper: "helperWrapper-classes",
-                                    listbox: "listbox-classes",
-                                    trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-r-none bg-default-50 !border-y-0 !border-l-0",
-                                    selectorIcon: "selectorIcon-classes",
-                                    spinner: "spinner-classes",
-                                    listboxWrapper: "listboxWrapper-classes",
-                                    popoverContent: "popoverContent-classes",
-                                }}
-                                onChange={handleSortChange}
-                                placeholder="Sort by..."
-                            >
-                                <SelectItem value="default" key={"default"}>Default</SelectItem>
-                                <SelectItem value="lowPrice" key={"lowPrice"}>By Low Price</SelectItem>
-                                <SelectItem value="highPrice" key={"highPrice"}>By High Price</SelectItem>
-                                <SelectItem value="createdAt" key={"createdAt"}>By Date</SelectItem>
-                            </Select>
-                            <Input
-                                variant='bordered'
-                                type="search"
-                                id="search"
-                                name="search"
-                                label="Search"
-                                classNames={{
-                                    base: "base-classes",
-                                    label: "label-classes",
-                                    mainWrapper: "main-wrapper-classes",
-                                    inputWrapper: "input-wrapper-classes rounded-l-none bg-default-50 !border-0",
-                                    innerWrapper: "inner-wrapper-classes",
-                                    input: "input-classes font-bold",
-                                    clearButton: "clear-button-classes",
-                                    helperWrapper: "helper-wrapper-classes",
-                                    description: "description-classes",
-                                    errorMessage: "error-message-classes",
-                                }}
-                                startContent={<SearchIcon className="size-5" />}
-                                endContent={
-                                    <Button type='button' variant='solid' color='default' className='font-semibold'>Search</Button>
-                                }
-                                placeholder="Type to search..."
-                                value={searchTerm}
-                                onChange={handleSearchChange}
-                            />
+                            <div className='flex flex-col w-full'>
+                                <div className="w-full flex">
+                                    <Autocomplete
+                                        label="Property Location"
+                                        name='searchLocationWise'
+                                        placeholder='Search Property Location...'
+                                        classNames={{
+                                            base: "base-classess shrink-1 w-full *:*:rounded-b-none",
+                                            clearButton: "clearButton-classess",
+                                            inputWrapper: "inputWrapper-classess",
+                                            listbox: "listbox-classess",
+                                            listboxWrapper: "listboxWrapper-classess",
+                                            popoverContent: "popoverContent-classess",
+                                            endContentWrapper: "endContentWrapper-classess",
+                                            selectorButton: "selectorButton-classess"
+                                        }}
+                                        selectedKeys={locationBy}
+                                        onSelectionChange={setLocationBy}
+                                        listboxProps={{
+                                            emptyContent: 'Property Not Found on this Location.'
+                                        }}
+                                        defaultItems={locations}
+                                        startContent={<SearchIcon className="text-default-400 size-5" />}
+                                    >
+                                        {(item) => (
+                                            <AutocompleteItem key={item?.location} value={item?.location}>
+                                                {item?.location}
+                                            </AutocompleteItem>
+                                        )}
+                                    </Autocomplete>
+                                </div>
+                                <div className="w-full flex">
+                                    <Select
+                                        variant='bordered'
+                                        label="Property Type"
+                                        selectedKeys={properyTypeBy}
+                                        onSelectionChange={setPropertyTypeBy}
+                                        disallowEmptySelection
+                                        classNames={{
+                                            value: "value-classes font-bold",
+                                            base: "base-classes shrink-1",
+                                            label: "label-classes",
+                                            description: "description-classes",
+                                            errorMessage: "errorMessage-classes",
+                                            mainWrapper: "mainWrapper-classes",
+                                            innerWrapper: "innerWrapper-classes",
+                                            helperWrapper: "helperWrapper-classes",
+                                            listbox: "listbox-classes",
+                                            trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-none bg-default-50 !border-y-0 !border-r-0 !border-l-0",
+                                            selectorIcon: "selectorIcon-classes",
+                                            spinner: "spinner-classes",
+                                            listboxWrapper: "listboxWrapper-classes",
+                                            popoverContent: "popoverContent-classes",
+                                        }}
+                                        placeholder="All Type"
+                                    >
+                                        <SelectItem value="" key={""}>All Type</SelectItem>
+                                        <SelectItem value="apartment" key={"apartment"}>Apartment</SelectItem>
+                                        <SelectItem value="flat" key={"flat"}>Flat</SelectItem>
+                                        <SelectItem value="villa" key={"villa"}>Villa</SelectItem>
+                                        <SelectItem value="office" key={"office"}>Office</SelectItem>
+                                        <SelectItem value="studio" key={"studio"}>Studio</SelectItem>
+                                        <SelectItem value="land" key={"land"}>Land</SelectItem>
+                                    </Select>
+
+                                    <Select
+                                        variant='bordered'
+                                        label="Order By"
+                                        selectedKeys={orderByField}
+                                        onSelectionChange={setOrderByField}
+                                        disallowEmptySelection
+                                        classNames={{
+                                            value: "value-classes font-bold",
+                                            base: "base-classes shrink-1",
+                                            label: "label-classes",
+                                            description: "description-classes",
+                                            errorMessage: "errorMessage-classes",
+                                            mainWrapper: "mainWrapper-classes",
+                                            innerWrapper: "innerWrapper-classes",
+                                            helperWrapper: "helperWrapper-classes",
+                                            listbox: "listbox-classes",
+                                            trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-none bg-default-50 !border-y-0 !border-r-0",
+                                            selectorIcon: "selectorIcon-classes",
+                                            spinner: "spinner-classes",
+                                            listboxWrapper: "listboxWrapper-classes",
+                                            popoverContent: "popoverContent-classes",
+                                        }}
+                                        placeholder="Default"
+                                    >
+                                        <SelectItem value="" key={""}>Default</SelectItem>
+                                        <SelectItem key="sale_price">Price</SelectItem>
+                                        <SelectItem key="createdAt">Date</SelectItem>
+                                    </Select>
+                                    <Select
+                                        variant='bordered'
+                                        label="Order By Direction"
+                                        selectedKeys={orderByDirection}
+                                        onSelectionChange={setOrderByDirection}
+                                        disallowEmptySelection
+                                        isDisabled={checkVariable(orderByField?.currentKey)}
+                                        classNames={{
+                                            value: "value-classes font-bold",
+                                            base: "base-classes shrink-1",
+                                            label: "label-classes",
+                                            description: "description-classes",
+                                            errorMessage: "errorMessage-classes",
+                                            mainWrapper: "mainWrapper-classes",
+                                            innerWrapper: "innerWrapper-classes",
+                                            helperWrapper: "helperWrapper-classes",
+                                            listbox: "listbox-classes",
+                                            trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-none bg-default-50 !border-y-0 !border-r-0",
+                                            selectorIcon: "selectorIcon-classes",
+                                            spinner: "spinner-classes",
+                                            listboxWrapper: "listboxWrapper-classes",
+                                            popoverContent: "popoverContent-classes",
+                                        }}
+                                        placeholder="Asc"
+                                    >
+                                        <SelectItem key="asc">{orderByField?.anchorKey == "sale_price" ? "Low to High" : "New to Old"}</SelectItem>
+                                        <SelectItem key="desc">{orderByField?.anchorKey == "sale_price" ? "High to Low" : "Old to New"}</SelectItem>
+                                    </Select>
+                                    <Select
+                                        variant='bordered'
+                                        label="Limit"
+                                        selectedKeys={limitValue}
+                                        onSelectionChange={setLimitValue}
+                                        disallowEmptySelection
+                                        classNames={{
+                                            value: "value-classes font-bold",
+                                            base: "base-classes shrink-1",
+                                            label: "label-classes",
+                                            description: "description-classes",
+                                            errorMessage: "errorMessage-classes",
+                                            mainWrapper: "mainWrapper-classes",
+                                            innerWrapper: "innerWrapper-classes",
+                                            helperWrapper: "helperWrapper-classes",
+                                            listbox: "listbox-classes",
+                                            trigger: "trigger-classes !border-r-2 border-default-300 dark:border-default-400 rounded-none bg-default-50 !border-y-0 !border-r-0",
+                                            selectorIcon: "selectorIcon-classes",
+                                            spinner: "spinner-classes",
+                                            listboxWrapper: "listboxWrapper-classes",
+                                            popoverContent: "popoverContent-classes",
+                                        }}
+                                        placeholder="All"
+                                    >
+                                        <SelectItem value="" key={""}>All</SelectItem>
+                                        <SelectItem key="5">5</SelectItem>
+                                        <SelectItem key="10">10</SelectItem>
+                                    </Select>
+                                </div>
+                            </div>
+
                         </form>
                     </div>
+
                 </div>
             </div>
-            <section className="relative py-16">
+            <section className="relative pb-16 pt-10">
                 <div className="max-w-7xl mx-auto w-full px-4 relative">
 
-                    <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 mt-8 gap-[30px]">
-                        {filteredData.map(item => (
-                            <FeaturedPropertyCard key={item.id} item={item} />
-                        ))}
-                        {/* <Card key={item.id}>
+                    {loading ? (
+                        <SkeletonFeaturedPropertyCard />
+                    ) : (
+                        <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 mt-8 gap-[30px]">
+                            {data.map(item => (
+                                <FeaturedPropertyCard key={item.id} item={item} />
+                            ))}
+                            {/* <Card key={item.id}>
                                 {`${item.title} ${new Timestamp(item.createdAt.seconds, item.createdAt.nanoseconds).toDate().toISOString()}`}
                             </Card> */}
-                    </div>
+                        </div>
+
+                    )}
 
                     <div className="md:flex justify-center text-center mt-6">
                         <div className="md:w-full">

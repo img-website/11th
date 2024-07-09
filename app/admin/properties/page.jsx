@@ -1,5 +1,5 @@
 "use client"
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -16,8 +16,18 @@ import {
   Chip,
   User,
   Pagination,
+  Card,
+  CardBody,
+  Snippet,
+  useDisclosure,
 } from "@nextui-org/react";
 import { ChevronDownIcon, PlusIcon, SearchIcon, VerticalDotsIcon } from "@/components/icons";
+import { Timestamp, collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { useFirebase } from "@/app/context/Firebase";
+import moment from "moment";
+import PropertyDetailModal from "@/components/modal/propertyDetail";
+import { toast } from "sonner";
+import Link from "next/link";
 // import {PlusIcon} from "./PlusIcon";
 // import {VerticalDotsIcon} from "./VerticalDotsIcon";
 // import {SearchIcon} from "./SearchIcon";
@@ -31,12 +41,14 @@ const statusColorMap = {
   vacation: "warning",
 };
 
-const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
+const INITIAL_VISIBLE_COLUMNS = ["title", "sale_price", "type", "isVarified", "condition", "status", "actions"];
 
 export default function PropertiesPage() {
-
-
-
+  const { firebaseDB: db } = useFirebase();
+  const [loading, setLoading] = React.useState(false);
+  const [data, setData] = React.useState([]);
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [selectedProperty, setSelectedProperty] = useState({})
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(new Set(INITIAL_VISIBLE_COLUMNS));
@@ -51,11 +63,11 @@ export default function PropertiesPage() {
 
   const columns = [
     { name: "ID", uid: "id", sortable: true },
-    { name: "NAME", uid: "name", sortable: true },
-    { name: "AGE", uid: "age", sortable: true },
-    { name: "ROLE", uid: "role", sortable: true },
-    { name: "TEAM", uid: "team" },
-    { name: "EMAIL", uid: "email" },
+    { name: "TITLE", uid: "title", sortable: true },
+    { name: "PRICE", uid: "sale_price", sortable: true },
+    { name: "TYPE", uid: "type", sortable: true },
+    { name: "DATE", uid: "createdAt", sortable: true },
+    { name: "VARIFIED", uid: "isVarified", sortable: true },
     { name: "STATUS", uid: "status", sortable: true },
     { name: "ACTIONS", uid: "actions" },
   ];
@@ -63,219 +75,44 @@ export default function PropertiesPage() {
   const statusOptions = [
     { name: "Active", uid: "active" },
     { name: "Paused", uid: "paused" },
-    { name: "Vacation", uid: "vacation" },
-  ];
-
-  const users = [
-    {
-      id: 1,
-      name: "Tony Reichert",
-      role: "CEO",
-      team: "Management",
-      status: "active",
-      age: "29",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
-      email: "tony.reichert@example.com",
-    },
-    {
-      id: 2,
-      name: "Zoey Lang",
-      role: "Tech Lead",
-      team: "Development",
-      status: "paused",
-      age: "25",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-      email: "zoey.lang@example.com",
-    },
-    {
-      id: 3,
-      name: "Jane Fisher",
-      role: "Sr. Dev",
-      team: "Development",
-      status: "active",
-      age: "22",
-      avatar: "https://i.pravatar.cc/150?u=a04258114e29026702d",
-      email: "jane.fisher@example.com",
-    },
-    {
-      id: 4,
-      name: "William Howard",
-      role: "C.M.",
-      team: "Marketing",
-      status: "vacation",
-      age: "28",
-      avatar: "https://i.pravatar.cc/150?u=a048581f4e29026701d",
-      email: "william.howard@example.com",
-    },
-    {
-      id: 5,
-      name: "Kristen Copper",
-      role: "S. Manager",
-      team: "Sales",
-      status: "active",
-      age: "24",
-      avatar: "https://i.pravatar.cc/150?u=a092581d4ef9026700d",
-      email: "kristen.cooper@example.com",
-    },
-    {
-      id: 6,
-      name: "Brian Kim",
-      role: "P. Manager",
-      team: "Management",
-      age: "29",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
-      email: "brian.kim@example.com",
-      status: "Active",
-    },
-    {
-      id: 7,
-      name: "Michael Hunt",
-      role: "Designer",
-      team: "Design",
-      status: "paused",
-      age: "27",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e29027007d",
-      email: "michael.hunt@example.com",
-    },
-    {
-      id: 8,
-      name: "Samantha Brooks",
-      role: "HR Manager",
-      team: "HR",
-      status: "active",
-      age: "31",
-      avatar: "https://i.pravatar.cc/150?u=a042581f4e27027008d",
-      email: "samantha.brooks@example.com",
-    },
-    {
-      id: 9,
-      name: "Frank Harrison",
-      role: "F. Manager",
-      team: "Finance",
-      status: "vacation",
-      age: "33",
-      avatar: "https://i.pravatar.cc/150?img=4",
-      email: "frank.harrison@example.com",
-    },
-    {
-      id: 10,
-      name: "Emma Adams",
-      role: "Ops Manager",
-      team: "Operations",
-      status: "active",
-      age: "35",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      email: "emma.adams@example.com",
-    },
-    {
-      id: 11,
-      name: "Brandon Stevens",
-      role: "Jr. Dev",
-      team: "Development",
-      status: "active",
-      age: "22",
-      avatar: "https://i.pravatar.cc/150?img=8",
-      email: "brandon.stevens@example.com",
-    },
-    {
-      id: 12,
-      name: "Megan Richards",
-      role: "P. Manager",
-      team: "Product",
-      status: "paused",
-      age: "28",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      email: "megan.richards@example.com",
-    },
-    {
-      id: 13,
-      name: "Oliver Scott",
-      role: "S. Manager",
-      team: "Security",
-      status: "active",
-      age: "37",
-      avatar: "https://i.pravatar.cc/150?img=12",
-      email: "oliver.scott@example.com",
-    },
-    {
-      id: 14,
-      name: "Grace Allen",
-      role: "M. Specialist",
-      team: "Marketing",
-      status: "active",
-      age: "30",
-      avatar: "https://i.pravatar.cc/150?img=16",
-      email: "grace.allen@example.com",
-    },
-    {
-      id: 15,
-      name: "Noah Carter",
-      role: "IT Specialist",
-      team: "I. Technology",
-      status: "paused",
-      age: "31",
-      avatar: "https://i.pravatar.cc/150?img=15",
-      email: "noah.carter@example.com",
-    },
-    {
-      id: 16,
-      name: "Ava Perez",
-      role: "Manager",
-      team: "Sales",
-      status: "active",
-      age: "29",
-      avatar: "https://i.pravatar.cc/150?img=20",
-      email: "ava.perez@example.com",
-    },
-    {
-      id: 17,
-      name: "Liam Johnson",
-      role: "Data Analyst",
-      team: "Analysis",
-      status: "active",
-      age: "28",
-      avatar: "https://i.pravatar.cc/150?img=33",
-      email: "liam.johnson@example.com",
-    },
-    {
-      id: 18,
-      name: "Sophia Taylor",
-      role: "QA Analyst",
-      team: "Testing",
-      status: "active",
-      age: "27",
-      avatar: "https://i.pravatar.cc/150?img=29",
-      email: "sophia.taylor@example.com",
-    },
-    {
-      id: 19,
-      name: "Lucas Harris",
-      role: "Administrator",
-      team: "Information Technology",
-      status: "paused",
-      age: "32",
-      avatar: "https://i.pravatar.cc/150?img=50",
-      email: "lucas.harris@example.com",
-    },
-    {
-      id: 20,
-      name: "Mia Robinson",
-      role: "Coordinator",
-      team: "Operations",
-      status: "active",
-      age: "26",
-      avatar: "https://i.pravatar.cc/150?img=45",
-      email: "mia.robinson@example.com",
-    },
   ];
 
 
-  // data end 
+  const getAllData = async () => {
+    const collectionRef = collection(db, "properties");
+    try {
+      setLoading(true);
+      const querySnapshot = await getDocs(collectionRef);
+      const res = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setData(res)
+      return res;
+    } catch (error) {
+      console.error('Error fetching data: ', error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const deleteData = async (id) => {
+    try {
+      const docRef = doc(db, "properties", id);
+      await deleteDoc(docRef);
+      toast.warning("Document successfully deleted!",
+        { description: `Document ID: ${id}` }
+      )
+    } catch (error) {
+      toast.error("Error deleting document",
+        { description: `Document ID: ${id}` }
+      )
+    }
+  }
 
 
 
-
-
+  useEffect(() => {
+    getAllData()
+  }, [])
 
   const [page, setPage] = React.useState(1);
 
@@ -288,11 +125,14 @@ export default function PropertiesPage() {
   }, [visibleColumns]);
 
   const filteredItems = React.useMemo(() => {
-    let filteredUsers = [...users];
+    let filteredUsers = [...data];
 
     if (hasSearchFilter) {
       filteredUsers = filteredUsers.filter((user) =>
-        user.name.toLowerCase().includes(filterValue.toLowerCase()),
+        user?.title?.toLowerCase()?.includes(filterValue?.toLowerCase()) ||
+        user?.type?.toLowerCase()?.includes(filterValue?.toLowerCase()) ||
+        user?.id?.includes(filterValue) ||
+        user?.sale_price?.toString()?.includes(filterValue),
       );
     }
     if (statusFilter !== "all" && Array.from(statusFilter).length !== statusOptions.length) {
@@ -302,7 +142,7 @@ export default function PropertiesPage() {
     }
 
     return filteredUsers;
-  }, [users, filterValue, statusFilter]);
+  }, [data, filterValue, statusFilter]);
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -327,27 +167,46 @@ export default function PropertiesPage() {
     const cellValue = user[columnKey];
 
     switch (columnKey) {
-      case "name":
+      case "id":
+        return (
+          <Snippet symbol=" ">{user?.id}</Snippet>
+        );
+      case "title":
         return (
           <User
-            avatarProps={{ radius: "lg", src: user.avatar }}
-            description={user.email}
-            name={cellValue}
+            avatarProps={{ radius: "lg", src: user.banner }}
+            description={user.condition}
+            name={user.title}
           >
-            {user.email}
+            {user.condition}
           </User>
         );
-      case "role":
+      case "isVarified":
         return (
-          <div className="flex flex-col">
-            <p className="text-bold text-small capitalize">{cellValue}</p>
-            <p className="text-bold text-tiny capitalize text-default-400">{user.team}</p>
-          </div>
+          <Chip
+            size="sm"
+            variant="dot"
+            color={user?.isVarified ? "success" : "danger"}
+          >
+            {user?.isVarified ? "Verified" : "Not Verified"}
+          </Chip>
+        );
+      case "type":
+        return (
+          <span className="capitalize">{user?.type}</span>
+        );
+      case "sale_price":
+        return (
+          <span className="font-bold">₹{user?.sale_price?.toLocaleString()}</span>
+        );
+      case "createdAt":
+        return (
+          <>{moment(new Timestamp(user?.createdAt?.seconds, user?.createdAt?.nanoseconds).toDate().toISOString()).format('ddd DD MMM YYYY')}</>
         );
       case "status":
         return (
-          <Chip className="capitalize" color={statusColorMap[user.status]} size="sm" variant="flat">
-            {cellValue}
+          <Chip className="capitalize" color={statusColorMap['active']} size="sm" variant="flat">
+            Active
           </Chip>
         );
       case "actions":
@@ -360,9 +219,12 @@ export default function PropertiesPage() {
                 </Button>
               </DropdownTrigger>
               <DropdownMenu>
-                <DropdownItem>View</DropdownItem>
+                <DropdownItem onPress={() => {
+                  onOpen()
+                  setSelectedProperty(user)
+                }}>View</DropdownItem>
                 <DropdownItem>Edit</DropdownItem>
-                <DropdownItem>Delete</DropdownItem>
+                <DropdownItem onPress={() => deleteData(user.id)}>Delete</DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -402,6 +264,10 @@ export default function PropertiesPage() {
     setFilterValue("")
     setPage(1)
   }, [])
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
 
   const topContent = React.useMemo(() => {
     return (
@@ -459,13 +325,13 @@ export default function PropertiesPage() {
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Button color="primary" endContent={<PlusIcon />}>
+            <Button as={Link} href="/admin/properties/add" color="primary" endContent={<PlusIcon />}>
               Add New
             </Button>
           </div>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-default-400 text-small">Total {users.length} users</span>
+          <span className="text-default-400 text-small">Total {data.length} users</span>
           <label className="flex items-center text-default-400 text-small">
             Rows per page:
             <select
@@ -485,7 +351,7 @@ export default function PropertiesPage() {
     statusFilter,
     visibleColumns,
     onRowsPerPageChange,
-    users.length,
+    data.length,
     onSearchChange,
     hasSearchFilter,
   ]);
@@ -520,45 +386,49 @@ export default function PropertiesPage() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   return (
-    <Table
-      aria-label="Example table with custom cells, pagination and sorting"
-      isHeaderSticky
-      bottomContent={bottomContent}
-      bottomContentPlacement="outside"
-      classNames={{
-        wrapper: "max-h-[382px]",
-      }}
-      selectedKeys={selectedKeys}
-      selectionMode="multiple"
-      sortDescriptor={sortDescriptor}
-      topContent={topContent}
-      topContentPlacement="outside"
-      onSelectionChange={setSelectedKeys}
-      onSortChange={setSortDescriptor}
-    >
-      <TableHeader columns={headerColumns}>
-        {(column) => (
-          <TableColumn
-            key={column.uid}
-            align={column.uid === "actions" ? "center" : "start"}
-            allowsSorting={column.sortable}
-          >
-            {column.name}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody emptyContent={"No users found"} items={sortedItems}>
-        {(item) => (
-          <TableRow key={item.id}>
-            {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+    <>
+      <div className="max-w-7xl mx-auto w-full px-4 relative py-8">
+        <Card>
+          <CardBody>
+            <Table
+              aria-label="Example table with custom cells, pagination and sorting"
+              isHeaderSticky
+              bottomContent={bottomContent}
+              bottomContentPlacement="outside"
+              classNames={{
+                wrapper: "max-h-[382px]",
+              }}
+              selectedKeys={selectedKeys}
+              selectionMode="multiple"
+              sortDescriptor={sortDescriptor}
+              topContent={topContent}
+              topContentPlacement="outside"
+              onSelectionChange={setSelectedKeys}
+              onSortChange={setSortDescriptor}
+            >
+              <TableHeader columns={headerColumns}>
+                {(column) => (
+                  <TableColumn
+                    key={column.uid}
+                    align={column.uid === "actions" ? "center" : "start"}
+                    allowsSorting={column.sortable}
+                  >
+                    {column.name}
+                  </TableColumn>
+                )}
+              </TableHeader>
+              <TableBody emptyContent={"No users found"} items={sortedItems}>
+                {(item) => (
+                  <TableRow key={item.id}>
+                    {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      </div>
+      {isOpen && <PropertyDetailModal isOpen={isOpen} onOpen={onOpen} onOpenChange={onOpenChange} selectedProperty={selectedProperty} />}
+    </>
   );
-}
-
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
 }

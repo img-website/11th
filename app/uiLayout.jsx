@@ -8,7 +8,6 @@ const UiLayout = ({ children }) => {
     const pathname = usePathname();
     const authPages = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password'
 
-
     return (
         <>
             <div className="h-dvh flex flex-col">
@@ -21,7 +20,7 @@ const UiLayout = ({ children }) => {
                             </Suspense>
                         </div>
                         <Suspense fallback={"Loading..."}>
-                            {!authPages && <FooterSection />}
+                            {(!authPages && !pathname.startsWith('/admin')) && <FooterSection />}
                         </Suspense>
                     </ScrollShadow>
                 </div>
