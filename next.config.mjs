@@ -32,6 +32,13 @@ const nextConfig = {
                 port: '',
                 pathname: '/**',
             },
+            {
+                protocol: 'https',
+                hostname: 'finder.createx.studio',
+                port: '',
+                pathname: '/**',
+            },
+            
         ],
     },
     pageExtensions: ['js', 'jsx']
