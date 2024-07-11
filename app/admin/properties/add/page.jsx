@@ -1,10 +1,20 @@
 "use client"
-import React, { useEffect, useRef, useState } from 'react'
-import { Checkbox, Input, Radio, RadioGroup, Select, SelectItem, Textarea, Button, Progress } from "@nextui-org/react";
+import React, { useEffect, useState } from 'react'
+import { Checkbox, Input, Select, SelectItem, Textarea, Button, Progress, CheckboxGroup, DateRangePicker } from "@nextui-org/react";
 import { useFirebase } from '@/app/context/Firebase';
 import { toast } from 'sonner';
 import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
+import { parseDate, getLocalTimeZone, today } from "@internationalized/date";
+import { useDateFormatter } from "@react-aria/i18n";
+import { PlusIcon, ResetIcon, UploadIcon } from '@/components/icons';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+
+
+const conditionCollaction = [
+    { key: "new", label: "New" },
+    { key: "old", label: "Old" },
+];
 
 const bedroomsCollaction = [
     { key: "1", label: "1 Bedroom" },
@@ -13,8 +23,8 @@ const bedroomsCollaction = [
     { key: "4", label: "4 Bedrooms" },
     { key: "5", label: "5 Bedrooms" },
     { key: "5+", label: "5+ Bedrooms" },
-
 ];
+
 const bathroomsCollaction = [
     { key: "1", label: "1 Bathroom" },
     { key: "2", label: "2 Bathrooms" },
@@ -22,8 +32,8 @@ const bathroomsCollaction = [
     { key: "4", label: "4 Bathrooms" },
     { key: "5", label: "5 Bathrooms" },
     { key: "5+", label: "5+ Bathrooms" },
-
 ];
+
 const parkingspotsCollaction = [
     { key: "1", label: "1 Parking" },
     { key: "2", label: "2 Parkings" },
@@ -31,49 +41,145 @@ const parkingspotsCollaction = [
     { key: "4", label: "4 Parkings" },
     { key: "5", label: "5 Parkings" },
     { key: "5+", label: "5+ Parkings" },
-
 ];
 
 
 const AddPage = () => {
-    const { firebaseDB } = useFirebase();
-    const [loading, setLoading] = useState(false);
+    const { firebaseDB, firebaseStorage } = useFirebase();
+
     const [propertyTypeCollaction, setPropertyTypeCollaction] = useState();
     const [locationsCollaction, setLocationsCollaction] = useState();
+    const [amenitiesCollaction, setAmenitiesCollaction] = useState();
 
+    const [loading, setLoading] = useState(false);
 
     // Banner
-    const [banner, setBanner] = useState('');
-
-    // Main Details
-    const [title, setTitle] = useState('A');
-    const [type, setType] = useState({ key: "", label: "" });
-
-    const [sale_price, setSale_price] = useState(0);
-    const [condition, setCondition] = useState('A');
-    const [isVarified, setIsVarified] = useState(false);
-    const [overview, setOverview] = useState('A');
-
-    // Address Details
-    const [area, setArea] = useState({ key: "", location: "" });
-    const [fullAddress, setFullAddress] = useState('A');
-
-    // Images
+    const [banner, setBanner] = useState(null);
     const [images, setImages] = useState([]);
 
+    // Main Details
+    const [title, setTitle] = useState('');
+    const [type, setType] = useState(new Set([propertyTypeCollaction?.[0]?.id]));
+
+    const [sale_price, setSale_price] = useState('');
+    const [condition, setCondition] = useState(new Set([conditionCollaction?.[0]?.key]));
+    const [isVarified, setIsVarified] = useState(false);
+    const [overview, setOverview] = useState('');
+
+    // Address Details
+    const [area, setArea] = useState(new Set([locationsCollaction?.[0]?.id]));
+    const [fullAddress, setFullAddress] = useState('');
+
+    // Images
+
     // Property Details
-    const [apartment_area, setApartment_area] = useState(0);
-    const [bedrooms, setBedrooms] = useState(0);
-    const [bathrooms, setBathrooms] = useState(0);
-    const [built, setBuilt] = useState(0);
-    const [parking_places, setParking_places] = useState(0);
-    const [pets_allowed, setPets_allowed] = useState("A");
+    const [apartment_area, setApartment_area] = useState();
+    const [bedrooms, setBedrooms] = useState(new Set([bedroomsCollaction?.[0]?.key]));
+    const [bathrooms, setBathrooms] = useState(new Set([bathroomsCollaction?.[0]?.key]));
+    const [parking_places, setParking_places] = useState(new Set([parkingspotsCollaction?.[0]?.key]));
+    const [pets_allowed, setPets_allowed] = useState([]);
+    const [amenities, setAmenities] = useState([]);
 
     // Contacts
-    const [first_name, setFirst_name] = useState('A');
-    const [sure_name, setSure_name] = useState('A');
-    const [email, setEmail] = useState('A');
-    const [phone, setPhone] = useState('A');
+    const [first_name, setFirst_name] = useState('');
+    const [sure_name, setSure_name] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+
+    const [built, setBuilt] = React.useState({
+        start: parseDate("2024-04-01"),
+        end: parseDate("2024-04-08"),
+    });
+    let formatter = useDateFormatter({ dateStyle: "long" });
+
+    const resetForm = () => {
+        // Banner
+        setBanner(null);
+        setImages([]);
+
+        // Main Details
+        setTitle('');
+        setType({ id: "", type: "" });
+
+        setSale_price('');
+        setCondition(new Set([conditionCollaction?.[0]?.key]));
+        setIsVarified(false);
+        setOverview('');
+
+        // Address Details
+        setArea({ id: "", location: "" });
+        setFullAddress('');
+
+        // Property Details
+        setApartment_area('');
+        setBedrooms(new Set([bedroomsCollaction?.[0]?.key]));
+        setBathrooms(new Set([bathroomsCollaction?.[0]?.key]));
+        setParking_places(new Set([parkingspotsCollaction?.[0]?.key]));
+        setPets_allowed([]);
+        setAmenities([]);
+
+        // Contacts
+        setFirst_name('');
+        setSure_name('');
+        setEmail('');
+        setPhone('');
+        setBuilt({
+            start: parseDate("2024-04-01"),
+            end: parseDate("2024-04-08"),
+        });
+    }
+
+
+
+
+    const [basicInfoProgress, setBasicInfoProgress] = useState(false);
+    const [locationProgress, setLocationProgress] = useState(false);
+    const [propertyDetailsProgress, setPropertyDetailsProgress] = useState(false);
+    const [priceProgress, setPriceProgress] = useState(false);
+    const [imagesProgress, setImagesProgress] = useState(false);
+    const [contactsProgress, setContactsProgress] = useState(false);
+
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        setBasicInfoProgress(banner !== null && title !== '' && type?.type !== '' && condition?.label !== '');
+    }, [banner, title, type, condition]);
+
+    useEffect(() => {
+        setLocationProgress(area?.id !== null && fullAddress !== '');
+    }, [area, fullAddress]);
+
+    useEffect(() => {
+        setPropertyDetailsProgress(apartment_area !== '' && bedrooms?.currentKey !== undefined && bathrooms?.currentKey !== undefined && parking_places?.currentKey !== undefined && overview !== '');
+    }, [apartment_area, bedrooms, bathrooms, parking_places, overview]);
+
+    useEffect(() => {
+        setPriceProgress(sale_price !== '');
+    }, [sale_price]);
+
+    useEffect(() => {
+        setImagesProgress(images?.length > 0);
+    }, [images]);
+
+    useEffect(() => {
+        setContactsProgress(first_name !== '' && sure_name !== '' && email !== '' && phone !== '');
+    }, [first_name, sure_name, email, phone]);
+
+    useEffect(() => {
+        const totalCriteria = 6;
+        const progressWeight = 100 / totalCriteria;
+
+        let newProgress = 0;
+        newProgress += basicInfoProgress ? progressWeight : 0;
+        newProgress += locationProgress ? progressWeight : 0;
+        newProgress += propertyDetailsProgress ? progressWeight : 0;
+        newProgress += priceProgress ? progressWeight : 0;
+        newProgress += imagesProgress ? progressWeight : 0;
+        newProgress += contactsProgress ? progressWeight : 0;
+
+        setProgress(newProgress);
+    }, [basicInfoProgress, locationProgress, propertyDetailsProgress, priceProgress, imagesProgress, contactsProgress]);
+
 
     const handleTypeChange = (id) => {
         if (id.size === 0) {
@@ -84,6 +190,10 @@ const AddPage = () => {
             setType({ id: selectedAnimal.id, type: selectedAnimal.type });
         }
     };
+    useEffect(()=>{
+        setType({ id: propertyTypeCollaction?.[0]?.id, type: propertyTypeCollaction?.[0]?.type })
+    },[propertyTypeCollaction])
+
 
     const handleAreaChange = (id) => {
         if (id.size === 0) {
@@ -94,6 +204,9 @@ const AddPage = () => {
             setArea({ id: selectedAnimal.id, location: selectedAnimal.location });
         }
     };
+    useEffect(()=>{
+        setArea({ id: locationsCollaction?.[0]?.id, location: locationsCollaction?.[0]?.location })
+    },[locationsCollaction])
 
     const getProperiyTypes = async () => {
         const collectionRef = collection(firebaseDB, "propertyTypes");
@@ -101,10 +214,15 @@ const AddPage = () => {
             const querySnapshot = await getDocs(collectionRef);
             const res = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setPropertyTypeCollaction(res)
+            // Set default value to first item if available
+            if (res.length > 0) {
+                setType({ id: res[0].id, type: res[0].type });
+            }
         } catch (error) {
             console.error('Error fetching propertyTypes data: ', error);
         }
     }
+
 
     const getLocations = async () => {
         const collectionRef = collection(firebaseDB, "locations");
@@ -118,51 +236,121 @@ const AddPage = () => {
         }
     }
 
+    const getAmenities = async () => {
+        const collectionRef = collection(firebaseDB, "amenities");
+        try {
+            const q = query(collectionRef, where("status", "==", true));
+            const querySnapshot = await getDocs(q);
+            const res = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAmenitiesCollaction(res)
+        } catch (error) {
+            console.error('Error fetching amenities data: ', error);
+        }
+    }
+
     useEffect(() => {
         getProperiyTypes();
         getLocations();
+        getAmenities();
     }, []);
 
 
 
+    const handleBannerChange = (event) => {
+        const file = event?.target?.files[0];
+        file?.type?.startsWith("image/") ? setBanner(file) : toast.error("Please select an image file.");
+    };
+
+    const handleImagesChange = (event) => {
+        const files = event.target.files;
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith("image/"));
+        if (imageFiles.length === 0) {
+            toast.error("Please select image files.");
+            return;
+        }
+        setImages(imageFiles);
+    };
+    const payload = {
+        title,
+        type: {
+            id: type?.id,
+            type: type?.type,
+        },
+        sale_price: Number(sale_price),
+        condition: condition?.currentKey ? String(condition?.currentKey) : Array.from(condition)[0],
+        isVarified: Boolean(isVarified),
+        overview: String(overview),
+        address: {
+            area: {
+                id: area?.id,
+                location: area?.location,
+            },
+            fullAddress: fullAddress ? String(fullAddress) : '',
+        },
+        property_details: {
+            apartment_area: apartment_area ? String(apartment_area) : '',
+            bathrooms: bathrooms?.currentKey ? String(bathrooms?.currentKey) : '',
+            bedrooms: bedrooms?.currentKey ? String(bedrooms?.currentKey) : '',
+            built: {
+                start: {
+                    year: built?.start?.year,
+                    month: built?.start?.month,
+                    day: built?.start?.day,
+                },
+                end: {
+                    year: built?.end?.year,
+                    month: built?.end?.month,
+                    day: built?.end?.day,
+                },
+            },
+            parking_places: parking_places?.currentKey ? String(parking_places?.currentKey) : '',
+            pets_allowed: pets_allowed,
+        },
+        amenities: amenities,
+        first_name: first_name,
+        sure_name: sure_name,
+        email: email,
+        phone: phone,
+        createdAt: serverTimestamp(),
+        modifiedAt: serverTimestamp()
+    }
+
+    console.log("payload", payload);
+
     // Submit Form
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!banner) {
+            toast.error("Please select an image file first.");
+            return;
+        }
+
         try {
-            const docRef = await addDoc(collection(firebaseDB, "properties"), {
-                title,
-                type: {
-                    id: type?.id,
-                    type: type?.type,
-                },
-                sale_price: Number(sale_price),
-                banner: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop",
-                condition: String(condition?.currentKey || condition),
-                isVarified: Boolean(isVarified),
-                overview: String(overview),
-                address: {
-                    area: {
-                        id: area?.id,
-                        location: area?.location,
-                    },
-                    fullAddress: String(fullAddress),
-                },
-                images: [
-                    "https://images.unsplash.com/photo-1494526585095-c41746248156?q=80&w=2070&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1512916958891-fcf61b2160df?q=80&w=2071&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=2070&auto=format&fit=crop"
-                ],
-                property_details: {
-                    apartment_area: Number(apartment_area),
-                    bathrooms: Number(bathrooms.currentKey || bathrooms),
-                    bedrooms: Number(bedrooms.currentKey || bedrooms),
-                    built: Number(built),
-                    parking_places: Number(parking_places.currentKey || parking_places),
-                    pets_allowed: String(pets_allowed),
-                },
-                createdAt: serverTimestamp(),
-                modifiedAt: serverTimestamp()
+            setLoading(true);
+            // Upload banner image
+            const bannerFilename = `${Date.now()}.${banner.name.split('.').pop()}`;
+            const bannerRef = ref(firebaseStorage, `/media/properties/banner/${bannerFilename}`);
+            const bannerSnapshot = await uploadBytes(bannerRef, banner);
+            const bannerURL = await getDownloadURL(bannerSnapshot.ref);
+
+            // Upload multiple images
+            const uploadPromises = images.map(async (file) => {
+                const newFilename = `${Date.now()}-${file.name}`;
+                const imagesRef = ref(firebaseStorage, `/media/properties/images/${newFilename}`);
+                const snapshot = await uploadBytes(imagesRef, file);
+                return await getDownloadURL(snapshot.ref);
             });
+
+            const imageUrls = await Promise.all(uploadPromises);
+
+            // Prepare form data
+            const formData = {
+                ...payload,
+                banner: bannerURL,
+                images: imageUrls,
+            };
+
+            const docRef = await addDoc(collection(firebaseDB, "properties"), formData);
             toast.success("Form Submitted Successfully", {
                 description: 'Our team will contact you shortly.',
             });
@@ -171,44 +359,64 @@ const AddPage = () => {
             toast.error("Error adding document", {
                 description: 'Please try again later.',
             });
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
         <>
-            <Button variant='solid' onClick={handleSubmit}>Upload Data</Button>
             <div className='relative bg-gray-50 dark:bg-black'>
                 <div className='max-w-7xl mx-auto w-full px-4 relative py-10'>
                     <div className='flex flex-wrap md:gap-0 gap-5'>
-                        <form onSubmit={handleSubmit} className='md:w-7/12 w-full md:pe-4'>
-                            <div className='text-black font-bold text-4xl dark:text-white'> Add property</div>
-                            <div className='bg-white shadow-md rounded-md dark:bg-slate-900 p-6 my-8'>
+                        <form onSubmit={handleSubmit} noValidate validationBehavior="native" className={`md:w-7/12 w-full md:pe-4 ${loading ? "pointer-events-none" : ""}`}>
+                            <div className='bg-white shadow-md rounded-md dark:bg-slate-900 p-6'>
                                 <div className='text-2xl pb-3 font-bold text-black dark:text-white flex items-center gap-2'> <span className='flex items-center'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 20 20" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path></svg></span> Basic info</div>
 
                                 <div className="flex w-full flex-wrap md:flex-nowrap flex-col gap-4">
+
+                                    <div className="mb-4 sm:col-span-2">
+                                        <div className="flex items-center justify-center w-full">
+                                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900 bg-cover bg-center" style={banner ? { backgroundImage: `url(${URL.createObjectURL(banner)})` } : {}}>
+                                                <div className={`flex flex-col items-center justify-center pt-5 pb-6 backdrop-blur-lg size-full group/opacity hover:opacity-100 ${banner ? 'opacity-0 bg-gray-900/50' : ''}`}>
+                                                    <UploadIcon className="size-6 text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400" />
+                                                    <p className="mb-2 text-sm text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                                    <p className="text-xs text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400">WEBP, AVIF, PNG, JPG or GIF (MAX. 800x400px)</p>
+                                                </div>
+                                                <input
+                                                    id="dropzone-file"
+                                                    type="file"
+                                                    className="hidden"
+                                                    onChange={handleBannerChange}
+                                                    // ref={inputFileRef}
+                                                    accept="image/*"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
                                     <div className='w-full'>
                                         <Input
                                             type="text"
-                                            isRequired
                                             variant="underlined"
                                             label="Title"
-                                            placeholder="Write a title"
+                                            isRequired
                                             validationBehavior="native"
                                             value={title}
                                             onValueChange={setTitle}
                                         />
                                     </div>
+
                                     <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
                                         <Select
                                             variant="underlined"
-                                            label="Property type  "
-                                            placeholder="Choose property type"
+                                            label="Property type"
+                                            disallowEmptySelection
                                             isRequired
                                             validationBehavior="native"
+                                            errorMessage
                                             className=""
                                             selectedKeys={new Set([type.id])}
                                             onSelectionChange={handleTypeChange}
-
                                         >
                                             {propertyTypeCollaction && propertyTypeCollaction?.map((item) => (
                                                 <SelectItem key={item?.id}>
@@ -219,20 +427,23 @@ const AddPage = () => {
                                         <Select
                                             variant="underlined"
                                             label="Condition"
-                                            placeholder="Choose condition"
+                                            disallowEmptySelection
                                             isRequired
                                             validationBehavior="native"
                                             className=""
                                             selectedKeys={condition}
                                             onSelectionChange={setCondition}
                                         >
-                                            <SelectItem key={"new"}>New</SelectItem>
-                                            <SelectItem key={"old"}>Old</SelectItem>
+                                            {conditionCollaction && conditionCollaction?.map((item) => (
+                                                <SelectItem key={item?.key}>
+                                                    {item?.label}
+                                                </SelectItem>
+                                            ))}
                                         </Select>
                                     </div>
 
                                     <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
-                                        <Checkbox isSelected={isVarified} onValueChange={setIsVarified}>
+                                        <Checkbox isSelected={isVarified} onValueChange={setIsVarified} validationBehavior="native">
                                             Property has been inspected
                                         </Checkbox>
                                     </div>
@@ -247,7 +458,7 @@ const AddPage = () => {
                                             <Select
                                                 variant="underlined"
                                                 label="Area"
-                                                placeholder="Choose Area"
+                                                disallowEmptySelection
                                                 isRequired
                                                 validationBehavior="native"
                                                 className=""
@@ -266,8 +477,8 @@ const AddPage = () => {
                                         <Input
                                             label="Full Address"
                                             type="text"
-                                            isRequired
                                             variant="underlined"
+                                            isRequired
                                             validationBehavior="native"
                                             value={fullAddress}
                                             onValueChange={setFullAddress}
@@ -283,10 +494,9 @@ const AddPage = () => {
                                     <div className="w-full flex flex-col gap-4">
                                         <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
                                             <Input
-                                                type="number"
+                                                type="tel"
                                                 variant="underlined"
                                                 label="Total area, sq.m "
-                                                placeholder="2"
                                                 isRequired
                                                 validationBehavior="native"
                                                 value={apartment_area}
@@ -295,7 +505,7 @@ const AddPage = () => {
                                             <Select
                                                 variant="underlined"
                                                 label="Bedrooms"
-                                                placeholder="Choose Bedrooms"
+                                                disallowEmptySelection
                                                 isRequired
                                                 validationBehavior="native"
                                                 selectedKeys={bedrooms}
@@ -313,7 +523,7 @@ const AddPage = () => {
                                         <Select
                                             variant="underlined"
                                             label="Bathrooms"
-                                            placeholder="Choose Bathrooms "
+                                            disallowEmptySelection
                                             isRequired
                                             validationBehavior="native"
                                             className=""
@@ -330,7 +540,7 @@ const AddPage = () => {
                                         <Select
                                             variant="underlined"
                                             label="Parking spots"
-                                            placeholder="Choose Parking spots "
+                                            disallowEmptySelection
                                             isRequired
                                             validationBehavior="native"
                                             className=""
@@ -345,47 +555,83 @@ const AddPage = () => {
                                         </Select>
 
                                     </div>
-                                    <div className='w-full flex flex-col gap-4'>
-                                        <div className='text-black text-lg dark:text-white'>Amenities</div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <Checkbox radius="full">WiFi</Checkbox>
-                                            <Checkbox radius="full">Air conditioning</Checkbox>
-                                            <Checkbox radius="full">Balcony</Checkbox>
-                                            <Checkbox radius="full">Garage</Checkbox>
-                                            <Checkbox radius="full">Gym</Checkbox>
-                                            <Checkbox defaultSelected radius="full"> Free parking</Checkbox>
-                                            <Checkbox radius="full">Pets-friendly</Checkbox>
-                                            <Checkbox radius="full">Pool</Checkbox>
-                                            <Checkbox radius="full">Bar</Checkbox>
-                                            <Checkbox radius="full">TV</Checkbox>
-                                            <Checkbox radius="full">Linens</Checkbox>
-                                            <Checkbox radius="full">Heating</Checkbox>
-                                            <Checkbox radius="full">Dishwasher</Checkbox>
-                                            <Checkbox radius="full">Iron</Checkbox>
-                                            <Checkbox radius="full">Hair dryer</Checkbox>
-                                            <Checkbox radius="full">Kitchen</Checkbox>
-                                            <Checkbox radius="full">Breakfast</Checkbox>
-                                            <Checkbox defaultSelected radius="full">Security cameras</Checkbox>
-                                        </div>
-                                    </div>
-                                    <div className='w-full flex flex-col gap-4'>
-                                        <div className='text-black text-lg dark:text-white'>Pets</div>
-                                        <div className="w-full flex flex-col gap-4">
-                                            <Checkbox radius="full">Cats allowed</Checkbox>
-                                            <Checkbox radius="full">Dogs allowed</Checkbox>
+                                    <div className='w-full flex flex-col gap-4 py-4'>
+                                        <CheckboxGroup
+                                            label="Select Amenities"
+                                            orientation="horizontal"
+                                            color="primary"
+                                            value={amenities}
+                                            onValueChange={setAmenities}
+                                            classNames={{
+                                                base: "base-classes",
+                                                label: "label-classes",
+                                                wrapper: "wrapper-classes grid md:grid-cols-3 grid-cols-2 gap-4",
+                                            }}
+                                        >
 
-                                        </div>
+                                            {amenitiesCollaction && amenitiesCollaction?.map((item) => (
+                                                <Checkbox value={item?.label} key={item?.id}>
+                                                    {item?.label}
+                                                </Checkbox>
+                                            ))}
+                                        </CheckboxGroup>
+                                    </div>
+                                    <div className="w-full flex flex-col gap-4 pb-4">
+                                        <CheckboxGroup
+                                            label="Pets Allow"
+                                            orientation="horizontal"
+                                            color="primary"
+                                            value={pets_allowed}
+                                            onValueChange={setPets_allowed}
+                                            classNames={{
+                                                base: "base-classes",
+                                                label: "label-classes",
+                                                wrapper: "wrapper-classes grid md:grid-cols-3 grid-cols-2 gap-4",
+                                            }}
+                                        >
+                                            <Checkbox value={'cats'} key={'cats'}>
+                                                Cats allowed
+                                            </Checkbox>
+                                            <Checkbox value={'dogs'} key={'dogs'}>
+                                                Dogs allowed
+                                            </Checkbox>
+                                        </CheckboxGroup>
+
                                     </div>
                                     <div>
                                         <Textarea
                                             variant="underlined"
                                             label="Description"
                                             labelPlacement="outside"
-                                            placeholder="Describe your property"
+                                            isRequired
+                                            validationBehavior="native"
                                             className="col-span-12 md:col-span-6 mb-6 md:mb-0"
                                             value={overview}
                                             onValueChange={setOverview}
                                         />
+                                    </div>
+
+                                    <div className="w-full flex flex-col gap-y-2">
+                                        <DateRangePicker
+                                            label="Build Date (From - To)"
+                                            variant='underlined'
+                                            // visibleMonths={3}
+                                            value={built}
+                                            showMonthAndYearPickers
+                                            isRequired
+                                            validationBehavior="native"
+                                            onChange={setBuilt}
+                                            maxValue={today(getLocalTimeZone())}
+                                        />
+                                        <p className="text-default-500 text-sm">
+                                            Selected date:{" "}
+                                            {built
+                                                ? formatter.formatRange(
+                                                    built.start.toDate(getLocalTimeZone()),
+                                                    built.end.toDate(getLocalTimeZone()),
+                                                )
+                                                : "--"}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -396,10 +642,9 @@ const AddPage = () => {
                                     <div className="w-full flex flex-col gap-4">
                                         <div className="flex w-full flex-wrap md:flex-nowrap mb-6 md:mb-0 gap-4">
                                             <Input
-                                                type="number"
+                                                type="tel"
                                                 variant="underlined"
-                                                label="Price "
-                                                placeholder="Enter Your Price "
+                                                label="Price"
                                                 isRequired
                                                 validationBehavior="native"
                                                 value={sale_price}
@@ -421,11 +666,15 @@ const AddPage = () => {
                                                 name="file-input"
                                                 id="file-input"
                                                 variant="underlined"
-                                                className="block w-full border border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400
+                                                multiple
+                                                onChange={handleImagesChange}
+                                                isRequired
+                                                validationBehavior="native"
+                                                className="block w-full border border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400
                                                     file:bg-gray-50 file:border-0
                                                     file:me-4
                                                     file:py-3 file:px-4
-                                                    dark:file:bg-neutral-700 dark:file:text-neutral-400"/>
+                                                    dark:file:bg-gray-700 dark:file:text-gray-400"/>
                                         </div>
                                     </div>
                                 </div>
@@ -438,20 +687,18 @@ const AddPage = () => {
 
                                     <Input
                                         type="text"
-                                        isRequired
                                         variant="underlined"
                                         label="First name"
-                                        placeholder="Annette"
+                                        isRequired
                                         validationBehavior="native"
                                         value={first_name}
                                         onValueChange={setFirst_name}
                                     />
                                     <Input
                                         type="text"
-                                        isRequired
                                         variant="underlined"
                                         label="Sure name"
-                                        placeholder="ererer"
+                                        isRequired
                                         validationBehavior="native"
                                         value={sure_name}
                                         onValueChange={setSure_name}
@@ -461,20 +708,18 @@ const AddPage = () => {
 
                                     <Input
                                         type="email"
-                                        isRequired
                                         variant="underlined"
                                         label="Email"
-                                        placeholder="Black"
+                                        isRequired
                                         validationBehavior="native"
                                         value={email}
                                         onValueChange={setEmail}
                                     />
                                     <Input
-                                        type="text"
-                                        isRequired
+                                        type="tel"
                                         variant="underlined"
                                         label="Phone number"
-                                        placeholder="3025550107"
+                                        isRequired
                                         validationBehavior="native"
                                         value={phone}
                                         onValueChange={setPhone}
@@ -483,13 +728,16 @@ const AddPage = () => {
 
                             </div>
 
-                            <div className='flex items-center justify-end'>
-                                <Button color="primary" variant="solid" type="submit">
-                                    Add Propery
+                            <div className='flex items-center gap-4'>
+                                <Button color="default" variant="faded" type="button" onClick={resetForm} startContent={<ResetIcon className="size-5" />} className='w-full font-bold'>
+                                    Reset
+                                </Button>
+                                <Button color="primary" variant="solid" type="submit" isLoading={loading} startContent={!loading && <PlusIcon className="size-5" />} className='w-full font-bold'>
+                                    Add Property
                                 </Button>
                             </div>
                         </form>
-                        <div className='md:w-5/12 w-full md:ps-4 '>
+                        <div className='md:w-5/12 w-full md:ps-4'>
                             <div className='bg-white shadow-md rounded-md dark:bg-slate-900 p-6 sticky top-10'>
                                 <div>
                                     <Progress
@@ -502,19 +750,19 @@ const AddPage = () => {
                                             label: "tracking-wider font-medium text-default-600",
                                             value: "text-foreground/60",
                                         }}
-                                        label="content filled"
-                                        value={65}
+                                        label="Content filled"
+                                        value={progress}
                                         showValueLabel={true}
                                     />
                                 </div>
 
                                 <div className='mt-5'>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Basic info</div>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Location</div>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Property details</div>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Price</div>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Photos / video</div>
-                                    <div className='flex items-center text-base text-black dark:text-white gap-3'><span className='flex items-center text-red-400'><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span>
+                                    <div className={`flex items-center text-base gap-3 ${basicInfoProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${basicInfoProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Basic info</div>
+                                    <div className={`flex items-center text-base gap-3 ${locationProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${locationProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Location</div>
+                                    <div className={`flex items-center text-base gap-3 ${propertyDetailsProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${propertyDetailsProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Property details</div>
+                                    <div className={`flex items-center text-base gap-3 ${priceProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${priceProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Price</div>
+                                    <div className={`flex items-center text-base gap-3 ${imagesProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${imagesProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span> Photos / video</div>
+                                    <div className={`flex items-center text-base gap-3 ${contactsProgress ? "text-gray-900 dark:text-gray-50" : "text-gray-500 dark:text-gray-400"}`}><span className={`flex items-center ${contactsProgress ? "text-success-500" : "text-gray-500"}`}><svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></span>
                                         Contacts</div>
 
 

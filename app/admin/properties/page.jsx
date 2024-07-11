@@ -20,14 +20,16 @@ import {
   CardBody,
   Snippet,
   useDisclosure,
+  Spinner,
 } from "@nextui-org/react";
-import { ChevronDownIcon, PlusIcon, SearchIcon, VerticalDotsIcon } from "@/components/icons";
-import { Timestamp, collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { ChevronDownIcon, HomeIcon, PlusIcon, SearchIcon, TrendingIcon, VerticalDotsIcon } from "@/components/icons";
+import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore";
 import { useFirebase } from "@/app/context/Firebase";
 import moment from "moment";
 import PropertyDetailModal from "@/components/modal/propertyDetail";
 import { toast } from "sonner";
 import Link from "next/link";
+import { deleteObject, ref } from "firebase/storage";
 // import {PlusIcon} from "./PlusIcon";
 // import {VerticalDotsIcon} from "./VerticalDotsIcon";
 // import {SearchIcon} from "./SearchIcon";
@@ -44,7 +46,7 @@ const statusColorMap = {
 const INITIAL_VISIBLE_COLUMNS = ["title", "sale_price", "type", "isVarified", "condition", "status", "actions"];
 
 export default function PropertiesPage() {
-  const { firebaseDB: db } = useFirebase();
+  const { firebaseDB: db, firebaseStorage } = useFirebase();
   const [loading, setLoading] = React.useState(false);
   const [data, setData] = React.useState([]);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -94,13 +96,45 @@ export default function PropertiesPage() {
     }
   }
 
-  const deleteData = async (id) => {
+  const deleteDataHandler = async (id) => {
     try {
       const docRef = doc(db, "properties", id);
+
+      // Extract image URL from document data
+      const docSnapshot = await getDoc(docRef);
+      const data = docSnapshot.data();
+      // Create a reference to the image
+
+      // Delete banner image
+      if (data.banner) {
+        const bannerRef = ref(firebaseStorage, data.banner);
+        try {
+          await deleteObject(bannerRef);
+        } catch (error) {
+          console.info(error.code);
+        }
+      }
+
+      // Delete images array
+      if (data.images && Array.isArray(data.images)) {
+        const deleteImagePromises = data.images.map(async (imageURL) => {
+          const imageRef = ref(firebaseStorage, imageURL);
+          try {
+            await deleteObject(imageRef);
+          } catch (error) {
+            console.info(error.code);
+          }
+        });
+
+        // Wait for all delete operations to complete
+        await Promise.all(deleteImagePromises);
+      }
+
       await deleteDoc(docRef);
       toast.warning("Document successfully deleted!",
         { description: `Document ID: ${id}` }
       )
+      getAllData()
     } catch (error) {
       toast.error("Error deleting document",
         { description: `Document ID: ${id}` }
@@ -193,7 +227,7 @@ export default function PropertiesPage() {
         );
       case "type":
         return (
-          <span className="capitalize">{user?.type}</span>
+          <span className="capitalize">{user?.type?.type}</span>
         );
       case "sale_price":
         return (
@@ -224,7 +258,7 @@ export default function PropertiesPage() {
                   setSelectedProperty(user)
                 }}>View</DropdownItem>
                 <DropdownItem>Edit</DropdownItem>
-                <DropdownItem onPress={() => deleteData(user.id)}>Delete</DropdownItem>
+                <DropdownItem onPress={() => deleteDataHandler(user.id)}>Delete</DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -417,7 +451,28 @@ export default function PropertiesPage() {
                   </TableColumn>
                 )}
               </TableHeader>
-              <TableBody emptyContent={"No users found"} items={sortedItems}>
+              <TableBody
+                items={sortedItems}
+                isLoading={loading}
+                loadingContent={<Spinner size="xl" label="Loading..."
+                    classNames={
+                        {
+                            circle1: 'border-b-primary dark:border-b-secondary',
+                            circle2: 'border-b-primary dark:border-b-secondary',
+                        }
+                    }
+                />}
+                emptyContent={
+                    <div className='py-12 px-4'>
+                        <div className='text-center'>
+                            <HomeIcon className="size-8 mx-auto" />
+                            <h3 className="mt-1 text-lg font-semibold">No Properties</h3>
+                            <p className="text-sm font-normal mb-4">Get started by adding a new property.</p>
+                            <Button as={Link} href='/admin/properties/add'><PlusIcon className="size-4" /> Add property</Button>
+                        </div>
+                    </div>
+                }
+              >
                 {(item) => (
                   <TableRow key={item.id}>
                     {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}

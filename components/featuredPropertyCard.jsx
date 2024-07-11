@@ -8,7 +8,7 @@ const FeaturedPropertyCard = ({item}) => {
     return (
         <Card className="group rounded-xl bg-white flex flex-col dark:bg-slate-900 shadow hover:shadow-xl dark:hover:shadow-xl dark:shadow-gray-700 dark:hover:shadow-gray-700 overflow-hidden ease-in-out duration-500">
             <div className="relative">
-                <Image width={400} height={300} className='w-full object-cover aspect-video' src={item?.banner} alt="" />
+                <Image width={400} height={300} className='w-full object-cover aspect-video' src={item?.banner} alt={item?.title} />
 
                 <div className="absolute top-4 end-4">
                     <Button as={Link} className='rounded-full min-w-0 h-auto p-1' href="" variant="ghost" color='danger'><HeartFilledIcon /></Button>
@@ -17,10 +17,10 @@ const FeaturedPropertyCard = ({item}) => {
 
             <div className="p-6 grow flex flex-col">
                 <div className="pb-4 grow">
-                    <Link href="/property-detail" className="text-lg hover:text-green-600 line-clamp-2 font-medium ease-in-out duration-500">{item?.title}</Link>
+                    <Link href="/property-detail" className="text-lg hover:text-green-600 line-clamp-2 font-medium ease-in-out duration-500">{item?.id}</Link>
                 </div>
                 <Divider className='opacity-35' />
-                <ul className="py-4 flex items-center list-none">
+                <ul className="flex items-center list-none">
                     <li className="flex items-center me-4">
                         <SqfIcon className="size-4 me-2 text-green-600" />
                         <span>{item?.property_details?.apartment_area}sqf</span>
