@@ -65,7 +65,7 @@ export const Navbar = () => {
 					{siteConfig.navItems.map((item) => (
 						<NavbarItem key={item.href}>
 							<NextLink
-								className="data-[active=true]:text-primary data-[active=true]:font-medium text-sm px-5"
+								className="data-[active=true]:text-primary data-[active=true]:font-medium text-sm px-2 md:px-3 lg:px-5"
 								color="foreground"
 								href={item.href}
 							>

@@ -257,7 +257,9 @@ export default function PropertiesPage() {
                   onOpen()
                   setSelectedProperty(user)
                 }}>View</DropdownItem>
-                <DropdownItem>Edit</DropdownItem>
+                <DropdownItem>
+                  <Link className="w-full flex" href={`/admin/properties/edit/${user?.id}`}>Edit</Link>
+                </DropdownItem>
                 <DropdownItem onPress={() => deleteDataHandler(user.id)}>Delete</DropdownItem>
               </DropdownMenu>
             </Dropdown>

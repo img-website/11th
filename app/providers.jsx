@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { NextUIProvider } from "@nextui-org/system";
 import { useRouter } from 'next/navigation'
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { FirebaseProvider } from "@/app/context/Firebase";
@@ -10,6 +9,7 @@ import { SidebarAndNavbarToggleProvider } from "@/app/context/SidebarAndNavbarTo
 import { AuthProvider } from "@/app/context/Authentications";
 import { Toaster } from "sonner";
 import MainLoading from "@/components/mainLoading";
+import { NextUIProvider } from "@nextui-org/react";
 
 export function Providers({ children, themeProps }) {
 	const router = useRouter();
@@ -17,7 +17,7 @@ export function Providers({ children, themeProps }) {
 	return (
 		<FirebaseProvider>
 			<AuthProvider>
-				<NextUIProvider navigate={router.push}>
+				<NextUIProvider validationBehavior="native" navigate={router.push}>
 					<NextThemesProvider {...themeProps}>
 						<SidebarAndNavbarToggleProvider>
 							<Toaster richColors expand={false} position="bottom-left" />

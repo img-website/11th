@@ -3,13 +3,14 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Checkbox, Input, Select, SelectItem, Textarea, Button, Progress, CheckboxGroup, DateRangePicker, Card, CardBody } from "@nextui-org/react";
 import { useFirebase } from '@/app/context/Firebase';
 import { toast } from 'sonner';
-import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 
 import { parseDate, getLocalTimeZone, today } from "@internationalized/date";
 import { useDateFormatter } from "@react-aria/i18n";
-import { DeleteIcon, PlusIcon, ResetIcon, UploadIcon } from '@/components/icons';
+import { CheckCircleIcon, DeleteIcon, UploadIcon } from '@/components/icons';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 
 const conditionCollaction = [
@@ -45,10 +46,11 @@ const parkingspotsCollaction = [
 ];
 
 
-const AddPage = () => {
+const EditPage = ({ params }) => {
     const { firebaseDB, firebaseStorage } = useFirebase();
+    const router = useRouter();
 
-
+    const [data, setData] = useState({});
     const [propertyTypeCollaction, setPropertyTypeCollaction] = useState();
     const [locationsCollaction, setLocationsCollaction] = useState();
     const [amenitiesCollaction, setAmenitiesCollaction] = useState();
@@ -58,6 +60,7 @@ const AddPage = () => {
     // Banner
     const bannerFileRef = useRef(null);
     const [banner, setBanner] = useState(null);
+    const [initialBanner, setInitialBanner] = React.useState(null);
 
     const imagesFileRef = useRef(null);
     const [images, setImages] = useState([]);
@@ -65,7 +68,7 @@ const AddPage = () => {
 
     // Main Details
     const [title, setTitle] = useState('');
-    const [type, setType] = useState(new Set([propertyTypeCollaction?.[0]?.id]));
+    const [type, setType] = useState({ id: data?.type?.id, type: data?.type?.type });
 
     const [sale_price, setSale_price] = useState('');
     const [condition, setCondition] = useState(new Set([conditionCollaction?.[0]?.key]));
@@ -98,49 +101,77 @@ const AddPage = () => {
     });
     let formatter = useDateFormatter({ dateStyle: "long" });
 
-    const resetForm = () => {
-        // Banner
-        setBanner(null);
-        if (bannerFileRef.current) {
-            bannerFileRef.current.value = "";
+
+
+    const fetchDataFromDB = async () => {
+        try {
+            const collectionRef = collection(firebaseDB, "properties");
+            const docRef = doc(collectionRef, params?.editId);
+            const docSnap = await getDoc(docRef);
+            setData(docSnap.data());
+            if (!docSnap.exists()) {
+                toast.error("No such property!", {
+                    description: 'Please select a valid property.',
+                });
+                router.push('/admin/properties');
+            }
+
+        } catch (error) {
+            console.log("errorss", error);
         }
-        if (imagesFileRef.current) {
-            imagesFileRef.current.value = [];
-        }
-        setImages([]);
-
-        // Main Details
-        setTitle('');
-        setType({ id: "", type: "" });
-
-        setSale_price('');
-        setCondition(new Set([conditionCollaction?.[0]?.key]));
-        setIsVarified(false);
-        setOverview('');
-
-        // Address Details
-        setArea({ id: "", location: "" });
-        setFullAddress('');
-
-        // Property Details
-        setApartment_area('');
-        setBedrooms(new Set([bedroomsCollaction?.[0]?.key]));
-        setBathrooms(new Set([bathroomsCollaction?.[0]?.key]));
-        setParking_places(new Set([parkingspotsCollaction?.[0]?.key]));
-        setPets_allowed([]);
-        setAmenities([]);
-
-        // Contacts
-        setFirst_name('');
-        setSure_name('');
-        setEmail('');
-        setPhone('');
-        setBuilt({
-            start: parseDate("2024-04-01"),
-            end: parseDate("2024-04-08"),
-        });
     }
 
+    useEffect(() => {
+        fetchDataFromDB()
+    }, [params])
+
+
+
+    useEffect(() => {
+        // Banner
+        setInitialBanner(data?.banner)
+
+        const imageUrls = data?.images || [];
+        setImages(imageUrls.map(url => ({ url, name: url.split("/").pop() })));
+
+        // Main Details
+        setTitle(data?.title);
+        setType({ id: data?.type?.id, type: data?.type?.type });
+
+        setSale_price(data?.sale_price);
+        setCondition(new Set([data?.condition]));
+        setIsVarified(data?.isVarified);
+        setOverview(data?.overview);
+
+        // Address Details
+        setArea({ id: data?.address?.area?.id, location: data?.address?.area?.location });
+        setFullAddress(data?.address?.fullAddress);
+
+        // Property Details
+        setApartment_area(data?.property_details?.apartment_area);
+        setBedrooms(new Set([data?.property_details?.bedrooms]));
+        setBathrooms(new Set([data?.property_details?.bathrooms]));
+        setParking_places(new Set([data?.property_details?.parking_places]));
+        setPets_allowed(data?.property_details?.pets_allowed);
+        setAmenities(data?.amenities);
+
+        // Contacts
+        setFirst_name(data?.first_name);
+        setSure_name(data?.sure_name);
+        setEmail(data?.email);
+        setPhone(data?.phone);
+
+        const padToTwoDigits = (num) => {
+            return num.toString().padStart(2, '0');
+        };
+
+        if (data?.property_details?.built?.start?.year) {
+            setBuilt({
+                start: parseDate(`${data?.property_details?.built?.start?.year}-${padToTwoDigits(data?.property_details?.built?.start?.month)}-${padToTwoDigits(data?.property_details?.built?.start?.day)}`),
+                end: parseDate(`${data?.property_details?.built?.end?.year}-${padToTwoDigits(data?.property_details?.built?.end?.month)}-${padToTwoDigits(data?.property_details?.built?.end?.day)}`),
+            });
+        }
+    }, [data])
 
 
 
@@ -154,15 +185,15 @@ const AddPage = () => {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        setBasicInfoProgress(banner !== null && title !== '' && type?.type !== '' && condition?.label !== '');
-    }, [banner, title, type, condition]);
+        setBasicInfoProgress((banner !== null || initialBanner !== '') && title !== '' && type?.type !== '' && condition?.label !== '');
+    }, [banner, initialBanner, title, type, condition]);
 
     useEffect(() => {
         setLocationProgress(area?.id !== null && fullAddress !== '');
     }, [area, fullAddress]);
 
     useEffect(() => {
-        setPropertyDetailsProgress(apartment_area !== '' && bedrooms?.currentKey !== undefined && bathrooms?.currentKey !== undefined && parking_places?.currentKey !== undefined && overview !== '');
+        setPropertyDetailsProgress(apartment_area !== '' && Array.from(bedrooms)[0] !== undefined && Array.from(bathrooms)[0] !== undefined && Array.from(parking_places)[0] !== undefined && overview !== '');
     }, [apartment_area, bedrooms, bathrooms, parking_places, overview]);
 
     useEffect(() => {
@@ -202,9 +233,7 @@ const AddPage = () => {
             setType({ id: selectedAnimal.id, type: selectedAnimal.type });
         }
     };
-    useEffect(() => {
-        setType({ id: propertyTypeCollaction?.[0]?.id, type: propertyTypeCollaction?.[0]?.type })
-    }, [propertyTypeCollaction])
+
 
 
     const handleAreaChange = (id) => {
@@ -216,9 +245,6 @@ const AddPage = () => {
             setArea({ id: selectedAnimal.id, location: selectedAnimal.location });
         }
     };
-    useEffect(() => {
-        setArea({ id: locationsCollaction?.[0]?.id, location: locationsCollaction?.[0]?.location })
-    }, [locationsCollaction])
 
     const getProperiyTypes = async () => {
         const collectionRef = collection(firebaseDB, "propertyTypes");
@@ -320,7 +346,9 @@ const AddPage = () => {
         if (imagesFileRef.current) {
             const dataTransfer = new DataTransfer();
             images.forEach(image => {
-                dataTransfer.items.add(image);
+                if (image instanceof File) {
+                    dataTransfer.items.add(image);
+                }
             });
             imagesFileRef.current.files = dataTransfer.files;
         }
@@ -346,7 +374,7 @@ const AddPage = () => {
             type: type?.type,
         },
         sale_price: Number(sale_price),
-        condition: condition?.currentKey ? String(condition?.currentKey) : Array.from(condition)[0],
+        condition: Array.from(condition)[0],
         isVarified: Boolean(isVarified),
         overview: String(overview),
         address: {
@@ -358,8 +386,8 @@ const AddPage = () => {
         },
         property_details: {
             apartment_area: apartment_area ? String(apartment_area) : '',
-            bathrooms: bathrooms?.currentKey ? String(bathrooms?.currentKey) : '',
-            bedrooms: bedrooms?.currentKey ? String(bedrooms?.currentKey) : '',
+            bathrooms: String(Array.from(bathrooms)[0]),
+            bedrooms: String(Array.from(bedrooms)[0]),
             built: {
                 start: {
                     year: built?.start?.year,
@@ -372,7 +400,7 @@ const AddPage = () => {
                     day: built?.end?.day,
                 },
             },
-            parking_places: parking_places?.currentKey ? String(parking_places?.currentKey) : '',
+            parking_places: Array.from(parking_places)[0] ? String(Array.from(parking_places)[0]) : '',
             pets_allowed: pets_allowed,
         },
         amenities: amenities,
@@ -380,19 +408,26 @@ const AddPage = () => {
         sure_name: sure_name,
         email: email,
         phone: phone,
-        createdAt: serverTimestamp(),
         modifiedAt: serverTimestamp()
     }
 
     // console.log("payload", payload);
 
+
+    const uploadImagesToStorage = async (files) => {
+        const uploadPromises = files.map(async file => {
+            const bannerFilename = `${Date.now()}.${file.name.split('.').pop()}`;
+            const storageRef = ref(firebaseStorage, `/media/properties/images/${bannerFilename}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            return await getDownloadURL(snapshot.ref);
+        });
+        return Promise.all(uploadPromises);
+    };
+
+
     // Submit Form
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!banner) {
-            toast.error("Please upload banner image.");
-            return;
-        }
         if (images?.length !== 8) {
             toast.error("Please upload total 8 images.");
             return;
@@ -400,36 +435,50 @@ const AddPage = () => {
 
         try {
             setLoading(true);
-            // Upload banner image
-            const bannerFilename = `${Date.now()}.${banner.name.split('.').pop()}`;
-            const bannerRef = ref(firebaseStorage, `/media/properties/banner/${bannerFilename}`);
-            const bannerSnapshot = await uploadBytes(bannerRef, banner);
-            const bannerURL = await getDownloadURL(bannerSnapshot.ref);
+            let bannerURL = '';
+            if (banner) {
+                // Upload banner image
+                const bannerFilename = `${Date.now()}.${banner.name.split('.').pop()}`;
+                const bannerRef = ref(firebaseStorage, `/media/properties/banner/${bannerFilename}`);
+                const bannerSnapshot = await uploadBytes(bannerRef, banner);
+                bannerURL = await getDownloadURL(bannerSnapshot.ref);
+            }
 
-            // Upload multiple images
-            const uploadPromises = images.map(async (file) => {
-                const newFilename = `${Date.now()}-${file.name}`;
-                const imagesRef = ref(firebaseStorage, `/media/properties/images/${newFilename}`);
-                const snapshot = await uploadBytes(imagesRef, file);
-                return await getDownloadURL(snapshot.ref);
-            });
+            // // Upload multiple images
+            // const uploadPromises = images.map(async (file) => {
+            //     const newFilename = `${Date.now()}-${file.name}`;
+            //     const imagesRef = ref(firebaseStorage, `/media/properties/images/${newFilename}`);
+            //     const snapshot = await uploadBytes(imagesRef, file);
+            //     return await getDownloadURL(snapshot.ref);
+            // });
 
-            const imageUrls = await Promise.all(uploadPromises);
+            // const imageUrls = await Promise.all(uploadPromises);
+
+            // Separate new and existing images
+            const newImages = images.filter(image => image instanceof File);
+            const existingImages = images.filter(image => !(image instanceof File)).map(image => image.url);
+
+            let newImageUrls = [];
+            if (newImages.length > 0) {
+                newImageUrls = await uploadImagesToStorage(newImages);
+            }
+
+            const finalImageUrls = [...existingImages, ...newImageUrls];
 
             // Prepare form data
             const formData = {
                 ...payload,
-                banner: bannerURL,
-                images: imageUrls,
+                ...banner ? { banner: bannerURL } : {},
+                images: finalImageUrls,
             };
 
-            const docRef = await addDoc(collection(firebaseDB, "properties"), formData);
+            const docRef = await updateDoc(doc(firebaseDB, "properties", params?.editId), formData);
             toast.success("Form Submitted Successfully", {
                 description: 'Our team will contact you shortly.',
             });
         } catch (error) {
-            console.error("Error adding document: ", error);
-            toast.error("Error adding document", {
+            console.error("Error updating document: ", error);
+            toast.error("Error updating document", {
                 description: 'Please try again later.',
             });
         } finally {
@@ -450,8 +499,8 @@ const AddPage = () => {
 
                                     <div className="mb-4 sm:col-span-2">
                                         <div className="flex items-center justify-center w-full relative">
-                                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900 bg-contain bg-no-repeat bg-center" style={banner ? { backgroundImage: `url(${URL.createObjectURL(banner)})` } : {}}>
-                                                <div className={`flex flex-col items-center justify-center pt-5 pb-6 backdrop-blur-lg size-full group/opacity hover:opacity-100 ${banner ? 'opacity-0 bg-gray-900/50' : ''}`}>
+                                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900 bg-contain bg-no-repeat bg-center" style={banner ? { backgroundImage: `url(${URL.createObjectURL(banner)})` } : { backgroundImage: `url(${initialBanner})` }}>
+                                                <div className={`flex flex-col items-center justify-center pt-5 pb-6 backdrop-blur-lg size-full group/opacity hover:opacity-100 ${(banner || initialBanner) ? 'opacity-0 bg-gray-900/50' : ''}`}>
                                                     <UploadIcon className="size-6 text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400" />
                                                     <p className="mb-2 text-base text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400"><span className="font-bold">Upload Banner</span></p>
                                                     <p className="mb-2 text-sm text-gray-500 group-[.opacity-0]/opacity:text-gray-100 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
@@ -763,7 +812,11 @@ const AddPage = () => {
                                             {images.map((image, index) => (
                                                 <Card key={index} className="relative bg-gray-50 dark:bg-gray-800">
                                                     <CardBody>
-                                                        <Image src={URL.createObjectURL(image)} alt={`Preview ${index}`} width={400} height={400} className="w-full aspect-square object-cover rounded" />
+                                                        {image instanceof File ? (
+                                                            <Image src={URL.createObjectURL(image)} alt={`Preview ${index}`} width={400} height={400} className="w-full aspect-square object-cover rounded" />
+                                                        ) : (
+                                                            <Image src={image?.url} alt={image?.name} width={400} height={400} className="w-full aspect-square object-cover rounded" />
+                                                        )}
                                                         <Button
                                                             color="danger"
                                                             variant={'solid'}
@@ -829,11 +882,8 @@ const AddPage = () => {
                             </div>
 
                             <div className='flex items-center gap-4'>
-                                <Button color="default" variant="faded" type="button" onClick={resetForm} startContent={<ResetIcon className="size-5" />} className='w-full font-bold'>
-                                    Reset
-                                </Button>
-                                <Button color="primary" variant="solid" type="submit" isLoading={loading} startContent={!loading && <PlusIcon className="size-5" />} className='w-full font-bold'>
-                                    Add Property
+                                <Button color="primary" variant="solid" type="submit" isLoading={loading} startContent={!loading && <CheckCircleIcon className="size-5" />} className='w-full font-bold'>
+                                    Save Changes
                                 </Button>
                             </div>
                         </form>
@@ -878,4 +928,4 @@ const AddPage = () => {
     )
 }
 
-export default AddPage
+export default EditPage
