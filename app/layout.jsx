@@ -1,8 +1,8 @@
 import "@/styles/globals.css";
+import { Providers } from "@/app/Providers";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import clsx from "clsx";
-import { Providers } from "@/app/Providers";
 
 export const metadata = {
 	title: {
